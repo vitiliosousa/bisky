@@ -2,75 +2,61 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Lock, Loader2, UserRound } from "lucide-react";
+import { Lock, Loader2, Mail } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { login, register } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [modo, setModo] = useState<"login" | "register">("login");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
     setLoading(true);
     const data = new FormData(e.currentTarget);
-    const user = String(data.get("user") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
     const pass = String(data.get("pass") ?? "");
-    setTimeout(() => {
-      if (!user || pass !== "bolo123") {
-        setErro("Utilizador ou senha incorretos.");
-        setLoading(false);
-        return;
+    const nome = String(data.get("nome") ?? "").trim();
+
+    try {
+      if (modo === "login") {
+        await login(email, pass);
+      } else {
+        await register(email, pass, nome || undefined);
       }
-      localStorage.setItem("cakescontrol_auth", "1");
-      localStorage.setItem("cakescontrol_user", user);
       router.replace("/dashboard");
-    }, 400);
+    } catch (err) {
+      setErro(
+        err instanceof ApiError
+          ? err.message
+          : "Não foi possível entrar. Tente novamente.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="flex h-dvh overflow-hidden flex-col lg:flex-row">
-
-      {/* ── Painel esquerdo — desktop ────────────────────────── */}
       <div
         className="relative hidden overflow-hidden lg:flex lg:w-[46%] xl:w-[44%] items-center justify-center"
-        style={{ background: "linear-gradient(150deg, #e63e5c 0%, #c72a47 50%, #9e1e37 100%)" }}
+        style={{
+          background:
+            "linear-gradient(150deg, #e63e5c 0%, #c72a47 50%, #9e1e37 100%)",
+        }}
       >
-        {/* Padrão de pontos */}
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundImage:
+              "radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)",
             backgroundSize: "24px 24px",
           }}
         />
-
-        {/* Orbs */}
-        <div
-          className="pointer-events-none absolute -top-24 -right-24 size-80 rounded-full blur-3xl"
-          style={{ background: "rgba(255,180,120,0.25)" }}
-        />
-        <div
-          className="pointer-events-none absolute -bottom-32 -left-16 size-72 rounded-full blur-3xl"
-          style={{ background: "rgba(120,30,60,0.5)" }}
-        />
-
-        {/* Anéis decorativos */}
-        <div
-          className="pointer-events-none absolute -right-32 top-1/2 -translate-y-1/2 size-125 rounded-full"
-          style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
-        />
-        <div
-          className="pointer-events-none absolute -right-48 top-1/2 -translate-y-1/2 size-125 rounded-full"
-          style={{ border: "1px solid rgba(255,255,255,0.06)" }}
-        />
-
-        {/* Logo centrado */}
         <div className="relative">
-          <div
-            className="absolute inset-0 -m-12 rounded-full blur-3xl"
-            style={{ background: "rgba(255,255,255,0.1)" }}
-          />
           <img
             src="/logobisky.svg"
             alt="Bisky"
@@ -80,37 +66,47 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Painel direito — formulário ──────────────────────── */}
       <div className="flex flex-1 items-center justify-center bg-white px-6 sm:px-8">
         <div className="w-full max-w-84">
-
-          {/* Logo — mobile only */}
           <div className="mb-10 flex justify-center lg:hidden">
             <img src="/Bisky Logo.svg" alt="Bisky" className="h-11 w-auto" />
           </div>
 
-          {/* Título */}
           <div className="mb-7 text-center">
             <h1 className="text-2xl font-bold tracking-tight text-ink">
-              Bem-vinda de volta
+              {modo === "login" ? "Bem-vinda de volta" : "Criar conta"}
             </h1>
             <p className="mt-1.5 text-sm text-muted">
-              Entre na sua conta para continuar.
+              {modo === "login"
+                ? "Entre na sua conta para continuar."
+                : "Registe-se para começar a usar o Bisky."}
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={onSubmit} className="space-y-3">
+            {modo === "register" && (
+              <label className="lbl">
+                Nome
+                <span className="mt-1.5 flex h-10 items-center gap-2.5 rounded-full border border-line bg-[#f8f8f9] px-4 transition-all focus-within:border-strawberry focus-within:bg-white focus-within:ring-2 focus-within:ring-strawberry/15">
+                  <input
+                    name="nome"
+                    placeholder="O seu nome"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
+                  />
+                </span>
+              </label>
+            )}
+
             <label className="lbl">
-              Nome
+              Email
               <span className="mt-1.5 flex h-10 items-center gap-2.5 rounded-full border border-line bg-[#f8f8f9] px-4 transition-all focus-within:border-strawberry focus-within:bg-white focus-within:ring-2 focus-within:ring-strawberry/15">
-                <UserRound className="size-4 shrink-0 text-muted" strokeWidth={1.75} />
+                <Mail className="size-4 shrink-0 text-muted" strokeWidth={1.75} />
                 <input
-                  name="user"
+                  name="email"
+                  type="email"
                   required
-                  defaultValue="Adélia Machava"
-                  autoComplete="username"
-                  placeholder="O seu nome"
+                  autoComplete="email"
+                  placeholder="email@exemplo.com"
                   className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
                 />
               </span>
@@ -124,7 +120,10 @@ export default function LoginPage() {
                   name="pass"
                   type="password"
                   required
-                  autoComplete="current-password"
+                  minLength={6}
+                  autoComplete={
+                    modo === "login" ? "current-password" : "new-password"
+                  }
                   placeholder="••••••••"
                   className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
                 />
@@ -148,21 +147,49 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="size-4 animate-spin" strokeWidth={2} />
-                  A entrar…
+                  {modo === "login" ? "A entrar…" : "A criar conta…"}
                 </>
-              ) : (
+              ) : modo === "login" ? (
                 "Entrar"
+              ) : (
+                "Criar conta"
               )}
             </button>
           </form>
 
           <p className="mt-6 text-center text-xs text-muted">
-            Senha demo:{" "}
-            <span className="font-semibold text-ink-soft">bolo123</span>
+            {modo === "login" ? (
+              <>
+                Não tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModo("register");
+                    setErro("");
+                  }}
+                  className="font-semibold text-strawberry hover:underline"
+                >
+                  Criar conta
+                </button>
+              </>
+            ) : (
+              <>
+                Já tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModo("login");
+                    setErro("");
+                  }}
+                  className="font-semibold text-strawberry hover:underline"
+                >
+                  Entrar
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>
-
     </div>
   );
 }

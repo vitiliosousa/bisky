@@ -67,11 +67,15 @@ export default function ClienteDetalhePage() {
     );
   }
 
-  function apagar() {
+  async function apagar() {
     if (!confirmDelete(cliente!.nome)) return;
-    removeCliente(cliente!.id);
-    toast("Cliente apagado.", "info");
-    router.push("/clientes");
+    try {
+      await removeCliente(cliente!.id);
+      toast("Cliente apagado.", "info");
+      router.push("/clientes");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   return (

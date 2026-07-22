@@ -50,13 +50,17 @@ export default function MateriaisPage() {
     setMobileDetail(true);
   }
 
-  function apagar() {
+  async function apagar() {
     if (!mat) return;
     if (!confirmDelete(mat.nome)) return;
-    removeMaterial(mat.id);
-    setSel(materiais.find((m) => m.id !== mat.id)?.id ?? "");
-    setMobileDetail(false);
-    toast("Material removido.", "info");
+    try {
+      await removeMaterial(mat.id);
+      setSel(materiais.find((m) => m.id !== mat.id)?.id ?? "");
+      setMobileDetail(false);
+      toast("Material removido.", "info");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   const lista = (
@@ -214,12 +218,19 @@ export default function MateriaisPage() {
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const qty = Number(reporQty);
                 if (!qty || qty <= 0) return;
-                upsertMaterial({ ...mat, quantidade: mat.quantidade + qty });
-                setReporQty("");
-                toast(`+${qty} ${mat.unidade} adicionados.`, "success");
+                try {
+                  await upsertMaterial({ ...mat, quantidade: mat.quantidade + qty });
+                  setReporQty("");
+                  toast(`+${qty} ${mat.unidade} adicionados.`, "success");
+                } catch (err) {
+                  toast(
+                    err instanceof Error ? err.message : "Erro ao actualizar.",
+                    "error",
+                  );
+                }
               }}
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
             >

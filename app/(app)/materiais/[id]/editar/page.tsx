@@ -47,19 +47,23 @@ export default function EditarMaterialPage() {
     );
   }
 
-  function submeter(e: React.FormEvent) {
+  async function submeter(e: React.FormEvent) {
     e.preventDefault();
-    upsertMaterial({
-      id: mat!.id,
-      nome: form.nome.trim(),
-      categoria: form.categoria,
-      quantidade: Number(form.quantidade) || 0,
-      unidade: form.unidade,
-      precoUnitario: Number(form.precoUnitario) || 0,
-      estoqueMinimo: Number(form.estoqueMinimo) || 0,
-    });
-    toast("Material actualizado.");
-    router.push("/materiais");
+    try {
+      await upsertMaterial({
+        id: mat!.id,
+        nome: form.nome.trim(),
+        categoria: form.categoria,
+        quantidade: Number(form.quantidade) || 0,
+        unidade: form.unidade,
+        precoUnitario: Number(form.precoUnitario) || 0,
+        estoqueMinimo: Number(form.estoqueMinimo) || 0,
+      });
+      toast("Material actualizado.");
+      router.push("/materiais");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

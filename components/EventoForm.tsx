@@ -31,15 +31,19 @@ export function EventoForm({
   const { upsertEvento } = useStore();
   const [edit, setEdit] = useState<EventoDraft>(initial);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.titulo.trim()) return;
-    upsertEvento({
-      ...edit,
-      hora: edit.hora || undefined,
-    });
-    toast(edit.id ? "Evento atualizado." : "Evento criado.");
-    onDone();
+    try {
+      await upsertEvento({
+        ...edit,
+        hora: edit.hora || undefined,
+      });
+      toast(edit.id ? "Evento atualizado." : "Evento criado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

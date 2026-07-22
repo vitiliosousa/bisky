@@ -74,26 +74,19 @@ export function Header({
   return (
     <header className="sticky top-0 z-20 bg-page">
       <div className="flex h-(--header-h) items-center gap-3 px-4 sm:px-6 lg:px-8">
-        {/* Logo — mobile only */}
-        <img
-          src="/bisky.svg"
-          alt="Bisky"
-          className="h-7 w-auto shrink-0 lg:hidden"
-        />
-
-        {/* Título + subtítulo — mobile e desktop */}
-        <div className="min-w-0">
-          <p className="truncate font-semibold leading-tight text-ink text-sm lg:text-xl">
+        {/* Título — no mobile só o título; subtítulo só no desktop */}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold leading-tight text-ink text-base sm:text-lg lg:text-xl">
             {pageTitle}
           </p>
           {pageSubtitle && (
-            <p className="truncate text-[0.65rem] text-muted lg:text-xs">{pageSubtitle}</p>
+            <p className="hidden truncate text-xs text-muted lg:block">
+              {pageSubtitle}
+            </p>
           )}
         </div>
 
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {/* Sino de notificações */}
           <div className="relative" ref={notiRef}>
             <button
@@ -201,7 +194,7 @@ export function Header({
             )}
           </div>
 
-          {/* User — só Perfil e Sair */}
+          {/* User — no mobile só avatar; nome no sm+ */}
           <div className="relative" ref={userRef}>
             <button
               type="button"
@@ -209,7 +202,7 @@ export function Header({
                 setUserOpen((v) => !v);
                 setNotiOpen(false);
               }}
-              className="flex items-center gap-2.5 rounded-full bg-[#f4f5f7] py-1.5 h-10 pl-1.5 pr-3 transition hover:bg-[#eceef1]"
+              className="flex items-center gap-2.5 rounded-full bg-[#f4f5f7] py-1.5 h-10 pl-1.5 pr-1.5 transition hover:bg-[#eceef1] sm:pr-3"
               aria-expanded={userOpen}
               aria-haspopup="menu"
             >

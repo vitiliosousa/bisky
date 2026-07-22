@@ -1,6 +1,7 @@
 "use client";
 
-import { getPerfil, type PerfilUtilizador } from "@/lib/profile";
+import { fetchMe, profileFromUser } from "@/lib/auth";
+import type { PerfilUtilizador } from "@/lib/profile";
 import { useStore } from "@/lib/store";
 import {
   Building2,
@@ -30,7 +31,9 @@ export default function PerfilPage() {
 
   useEffect(() => {
     function refresh() {
-      setPerfil(getPerfil());
+      fetchMe()
+        .then((me) => setPerfil(profileFromUser(me)))
+        .catch(() => setPerfil(null));
     }
     refresh();
     window.addEventListener("bisky:profile-updated", refresh);

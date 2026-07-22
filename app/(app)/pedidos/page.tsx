@@ -223,16 +223,20 @@ function PedidosContent() {
           </Link>
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (!confirmDelete(cliente?.nome ?? pedido.id)) return;
-              removePedido(pedido.id);
-              setSel(
-                pedidos.find(
-                  (p) => p.id !== pedido.id && p.estado !== "cancelado",
-                )?.id ?? "",
-              );
-              setMobileDetail(false);
-              toast("Pedido apagado.", "info");
+              try {
+                await removePedido(pedido.id);
+                setSel(
+                  pedidos.find(
+                    (p) => p.id !== pedido.id && p.estado !== "cancelado",
+                  )?.id ?? "",
+                );
+                setMobileDetail(false);
+                toast("Pedido apagado.", "info");
+              } catch (err) {
+                toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+              }
             }}
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95"
           >
@@ -303,22 +307,29 @@ function PedidosContent() {
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const val = Number(pagamentoValor);
                 if (!val || val <= 0) return;
-                upsertPedido({
-                  ...pedido,
-                  pago: Math.min(pedido.valor, pedido.pago + val),
-                });
-                upsertMovimento({
-                  tipo: "entrada",
-                  descricao: `Pagamento — ${cliente?.nome ?? "cliente"}`,
-                  valor: val,
-                  data: HOJE,
-                  categoria: "Pedidos",
-                });
-                setPagamentoValor("");
-                toast("Pagamento registado.", "success");
+                try {
+                  await upsertPedido({
+                    ...pedido,
+                    pago: Math.min(pedido.valor, pedido.pago + val),
+                  });
+                  await upsertMovimento({
+                    tipo: "entrada",
+                    descricao: `Pagamento — ${cliente?.nome ?? "cliente"}`,
+                    valor: val,
+                    data: HOJE,
+                    categoria: "Pedidos",
+                  });
+                  setPagamentoValor("");
+                  toast("Pagamento registado.", "success");
+                } catch (err) {
+                  toast(
+                    err instanceof Error ? err.message : "Erro ao registar.",
+                    "error",
+                  );
+                }
               }}
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
             >
@@ -400,7 +411,10 @@ function PedidosContent() {
             <>
               <button
                 type="button"
-                onClick={() => setConsumoMsg(consumirPedido(pedido.id).msg)}
+                onClick={async () => {
+                  const result = await consumirPedido(pedido.id);
+                  setConsumoMsg(result.msg);
+                }}
                 className="w-full rounded-full bg-mint py-2 text-sm font-semibold text-white transition hover:brightness-110"
               >
                 Aplicar ao estoque e materiais

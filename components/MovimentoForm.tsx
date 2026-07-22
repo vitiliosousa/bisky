@@ -41,15 +41,19 @@ export function MovimentoForm({
     return [...set];
   }, [movimentos, edit.tipo, edit.categoria]);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.descricao.trim()) return;
-    upsertMovimento({
-      ...edit,
-      valor: Number(edit.valor) || 0,
-    });
-    toast(edit.id ? "Movimento atualizado." : "Movimento registado.");
-    onDone();
+    try {
+      await upsertMovimento({
+        ...edit,
+        valor: Number(edit.valor) || 0,
+      });
+      toast(edit.id ? "Movimento atualizado." : "Movimento registado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

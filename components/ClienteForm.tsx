@@ -23,12 +23,16 @@ export function ClienteForm({
   const { upsertCliente } = useStore();
   const [edit, setEdit] = useState<ClienteDraft>(initial);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
-    upsertCliente(edit);
-    toast(edit.id ? "Cliente atualizado." : "Cliente criado.");
-    onDone();
+    try {
+      await upsertCliente(edit);
+      toast(edit.id ? "Cliente atualizado." : "Cliente criado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

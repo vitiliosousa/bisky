@@ -32,18 +32,22 @@ export function IngredienteForm({
   const { upsertIngrediente } = useStore();
   const [edit, setEdit] = useState<IngredienteDraft>(initial);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
-    upsertIngrediente({
-      ...edit,
-      quantidadeAtual: Number(edit.quantidadeAtual) || 0,
-      precoCompra: Number(edit.precoCompra) || 0,
-      quantidadeCompra: Number(edit.quantidadeCompra) || 1,
-      estoqueMinimo: Number(edit.estoqueMinimo) || 0,
-    });
-    toast(edit.id ? "Ingrediente atualizado." : "Ingrediente adicionado.");
-    onDone();
+    try {
+      await upsertIngrediente({
+        ...edit,
+        quantidadeAtual: Number(edit.quantidadeAtual) || 0,
+        precoCompra: Number(edit.precoCompra) || 0,
+        quantidadeCompra: Number(edit.quantidadeCompra) || 1,
+        estoqueMinimo: Number(edit.estoqueMinimo) || 0,
+      });
+      toast(edit.id ? "Ingrediente atualizado." : "Ingrediente adicionado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

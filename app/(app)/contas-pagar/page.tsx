@@ -60,28 +60,36 @@ export default function ContasPagarPage() {
     setMobileDetail(true);
   }
 
-  function marcarPaga() {
+  async function marcarPaga() {
     if (!conta) return;
-    upsertContaPagar({ ...conta, paga: true });
-    upsertMovimento({
-      tipo: "saida",
-      descricao: conta.descricao
-        ? `${conta.fornecedor} — ${conta.descricao}`
-        : conta.fornecedor,
-      valor: conta.valor,
-      data: HOJE,
-      categoria: "Fornecedores",
-    });
-    toast("Marcada como paga.", "success");
+    try {
+      await upsertContaPagar({ ...conta, paga: true });
+      await upsertMovimento({
+        tipo: "saida",
+        descricao: conta.descricao
+          ? `${conta.fornecedor} — ${conta.descricao}`
+          : conta.fornecedor,
+        valor: conta.valor,
+        data: HOJE,
+        categoria: "Fornecedores",
+      });
+      toast("Marcada como paga.", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao marcar.", "error");
+    }
   }
 
-  function apagar() {
+  async function apagar() {
     if (!conta) return;
     if (!confirmDelete(conta.fornecedor)) return;
-    removeContaPagar(conta.id);
-    setSel(contasPagar.find((c) => c.id !== conta.id)?.id ?? "");
-    setMobileDetail(false);
-    toast("Conta apagada.", "info");
+    try {
+      await removeContaPagar(conta.id);
+      setSel(contasPagar.find((c) => c.id !== conta.id)?.id ?? "");
+      setMobileDetail(false);
+      toast("Conta apagada.", "info");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   const lista = (

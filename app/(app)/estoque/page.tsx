@@ -57,13 +57,17 @@ export default function EstoquePage() {
     setMobileDetail(true);
   }
 
-  function apagar() {
+  async function apagar() {
     if (!ing) return;
     if (!confirmDelete(ing.nome)) return;
-    removeIngrediente(ing.id);
-    setSel(ingredientes.find((i) => i.id !== ing.id)?.id ?? "");
-    setMobileDetail(false);
-    toast("Ingrediente removido.", "info");
+    try {
+      await removeIngrediente(ing.id);
+      setSel(ingredientes.find((i) => i.id !== ing.id)?.id ?? "");
+      setMobileDetail(false);
+      toast("Ingrediente removido.", "info");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   const lista = (
@@ -311,12 +315,22 @@ export default function EstoquePage() {
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const qty = Number(entradaQty);
                 if (!qty || qty <= 0) return;
-                upsertIngrediente({ ...ing, quantidadeAtual: ing.quantidadeAtual + qty });
-                setEntradaQty("");
-                toast(`+${qty} ${ing.unidade} adicionados.`, "success");
+                try {
+                  await upsertIngrediente({
+                    ...ing,
+                    quantidadeAtual: ing.quantidadeAtual + qty,
+                  });
+                  setEntradaQty("");
+                  toast(`+${qty} ${ing.unidade} adicionados.`, "success");
+                } catch (err) {
+                  toast(
+                    err instanceof Error ? err.message : "Erro ao actualizar.",
+                    "error",
+                  );
+                }
               }}
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
             >
@@ -343,14 +357,21 @@ export default function EstoquePage() {
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const qty = Number(perdaQty);
                 if (!qty || qty <= 0) return;
-                const novaQty = Math.max(0, ing.quantidadeAtual - qty);
-                upsertIngrediente({ ...ing, quantidadeAtual: novaQty });
-                setPerdaQty("");
-                setPerdaMotivo("");
-                toast(`−${qty} ${ing.unidade} registados como perda.`, "info");
+                try {
+                  const novaQty = Math.max(0, ing.quantidadeAtual - qty);
+                  await upsertIngrediente({ ...ing, quantidadeAtual: novaQty });
+                  setPerdaQty("");
+                  setPerdaMotivo("");
+                  toast(`−${qty} ${ing.unidade} registados como perda.`, "info");
+                } catch (err) {
+                  toast(
+                    err instanceof Error ? err.message : "Erro ao registar.",
+                    "error",
+                  );
+                }
               }}
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-strawberry-soft px-4 text-sm font-semibold text-strawberry transition hover:brightness-95"
             >

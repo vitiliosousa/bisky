@@ -15,21 +15,25 @@ export function PerfilForm({
 }) {
   const [edit, setEdit] = useState<PerfilUtilizador>(initial);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
-    savePerfil({
-      ...edit,
-      nome: edit.nome.trim(),
-      email: edit.email.trim(),
-      telefone: edit.telefone.trim(),
-      endereco: edit.endereco.trim(),
-      negocio: edit.negocio.trim(),
-      papel: edit.papel.trim(),
-      bio: edit.bio.trim(),
-    });
-    toast("Perfil atualizado.");
-    onDone();
+    try {
+      await savePerfil({
+        ...edit,
+        nome: edit.nome.trim(),
+        email: edit.email.trim(),
+        telefone: edit.telefone.trim(),
+        endereco: edit.endereco.trim(),
+        negocio: edit.negocio.trim(),
+        papel: edit.papel.trim(),
+        bio: edit.bio.trim(),
+      });
+      toast("Perfil atualizado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (
@@ -82,9 +86,9 @@ export function PerfilForm({
             <input
               className="field"
               type="email"
+              readOnly
               placeholder="email@exemplo.com"
               value={edit.email}
-              onChange={(e) => setEdit({ ...edit, email: e.target.value })}
             />
           </label>
           <label className="lbl">

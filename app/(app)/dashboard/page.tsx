@@ -9,6 +9,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { fetchMe } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import {
   AlertTriangle,
@@ -81,10 +82,12 @@ const chartConfig = {
 export default function DashboardPage() {
   const { pedidos, ingredientes, contasPagar, movimentos, clientes, produtos } =
     useStore();
-  const [user, setUser] = useState("Adélia Machava");
+  const [user, setUser] = useState("");
 
   useEffect(() => {
-    setUser(localStorage.getItem("cakescontrol_user") || "Adélia Machava");
+    fetchMe()
+      .then((me) => setUser(me.profile?.nome ?? me.email))
+      .catch(() => setUser(""));
   }, []);
 
   const weekStart = startOfWeek(HOJE);

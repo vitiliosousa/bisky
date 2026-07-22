@@ -24,12 +24,16 @@ export function ContaForm({
   const { upsertContaPagar } = useStore();
   const [edit, setEdit] = useState<ContaDraft>(initial);
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.fornecedor.trim()) return;
-    upsertContaPagar({ ...edit, valor: Number(edit.valor) || 0 });
-    toast(edit.id ? "Conta actualizada." : "Conta adicionada.");
-    onDone();
+    try {
+      await upsertContaPagar({ ...edit, valor: Number(edit.valor) || 0 });
+      toast(edit.id ? "Conta actualizada." : "Conta adicionada.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

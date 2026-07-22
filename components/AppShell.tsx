@@ -6,21 +6,47 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
-  Briefcase,
-  Wallet,
+  Package,
+  Menu,
   Plus,
 } from "lucide-react";
 import { Header } from "./Header";
 import { NAV_ALL, Sidebar } from "./Sidebar";
 import { Toaster } from "./ui";
-import { getPerfil } from "@/lib/profile";
+import { clearAuth, fetchMe, isAuthenticated } from "@/lib/auth";
+import { useStore } from "@/lib/store";
 
 const BOTTOM_NAV = [
-  { href: "/dashboard",  label: "Início",   icon: LayoutDashboard },
-  { href: "/pedidos",    label: "Pedidos",  icon: ShoppingBag     },
-  { href: "/negocio",    label: "Negócio",  icon: Briefcase       },
-  { href: "/financas",   label: "Finanças", icon: Wallet          },
+  { href: "/dashboard", label: "Início", icon: LayoutDashboard },
+  { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
+  { href: "/estoque", label: "Estoque", icon: Package },
+  { href: "/mais", label: "Mais", icon: Menu },
 ];
+
+/** Rotas que pertencem ao tab "Mais" (para manter activo). */
+const MAIS_PREFIXES = [
+  "/mais",
+  "/clientes",
+  "/produtos",
+  "/calendario",
+  "/materiais",
+  "/perdas",
+  "/caixa",
+  "/contas-pagar",
+  "/relatorios",
+  "/perfil",
+  "/negocio",
+  "/financas",
+];
+
+function isTabActive(href: string, pathname: string) {
+  if (href === "/mais") {
+    return MAIS_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(p + "/"),
+    );
+  }
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 function getPageInfo(pathname: string) {
   if (pathname === "/produtos/novo") {
@@ -77,6 +103,9 @@ function getPageInfo(pathname: string) {
   if (pathname === "/financas") {
     return { title: "Finanças", subtitle: "Caixa, contas e relatórios" };
   }
+  if (pathname === "/mais") {
+    return { title: "Mais", subtitle: "Todas as secções" };
+  }
   if (pathname === "/perdas") {
     return { title: "Perdas", subtitle: "Desperdícios e baixas de stock" };
   }
@@ -108,33 +137,55 @@ function getPageInfo(pathname: string) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { loading: storeLoading } = useStore();
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState("Adélia Machava");
+  const [user, setUser] = useState("");
   const [papel, setPapel] = useState("Confeiteira");
 
   useEffect(() => {
-    const ok = localStorage.getItem("cakescontrol_auth") === "1";
-    if (!ok) {
+    if (!isAuthenticated()) {
       router.replace("/login");
       return;
     }
-    function refreshUser() {
-      const perfil = getPerfil();
-      setUser(perfil.nome);
-      setPapel(perfil.papel);
+
+    async function loadUser() {
+      try {
+        const me = await fetchMe();
+        setUser(me.profile?.nome ?? me.email);
+        setPapel(me.profile?.papel ?? "Confeiteira");
+        setReady(true);
+      } catch {
+        clearAuth();
+        router.replace("/login");
+      }
     }
-    refreshUser();
+
+    function refreshUser() {
+      fetchMe()
+        .then((me) => {
+          setUser(me.profile?.nome ?? me.email);
+          setPapel(me.profile?.papel ?? "Confeiteira");
+        })
+        .catch(() => undefined);
+    }
+
+    loadUser();
     window.addEventListener("bisky:profile-updated", refreshUser);
-    setReady(true);
-    return () => window.removeEventListener("bisky:profile-updated", refreshUser);
+    window.addEventListener("bisky:unauthorized", () => {
+      clearAuth();
+      router.replace("/login");
+    });
+    return () => {
+      window.removeEventListener("bisky:profile-updated", refreshUser);
+    };
   }, [router]);
 
   function sair() {
-    localStorage.removeItem("cakescontrol_auth");
+    clearAuth();
     router.replace("/login");
   }
 
-  if (!ready) {
+  if (!ready || storeLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page text-muted">
         A carregar…
@@ -142,14 +193,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const page = getPageInfo(pathname);
+
   return (
     <div className="flex min-h-dvh bg-page">
       <Sidebar pathname={pathname} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
-          pageTitle={getPageInfo(pathname).title}
-          pageSubtitle={getPageInfo(pathname).subtitle}
+          pageTitle={page.title}
+          pageSubtitle={page.subtitle}
           user={user}
           papel={papel}
           onSair={sair}
@@ -160,16 +213,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
         <Toaster />
 
-        {/* ── Bottom nav mobile ──────────────────────────────── */}
+        {/* Bottom nav — só mobile */}
         <nav className="fixed inset-x-0 bottom-0 z-20 flex items-stretch border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
           {BOTTOM_NAV.slice(0, 2).map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = isTabActive(item.href, pathname);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center justify-center gap-1 min-h-14 text-[0.6rem] font-semibold transition-colors ${
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 min-h-14 text-[0.65rem] font-semibold transition-colors ${
                   active ? "text-strawberry" : "text-muted"
                 }`}
               >
@@ -179,11 +232,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
 
-          {/* Botão central — Novo pedido */}
           <div className="flex flex-1 items-center justify-center">
             <Link
               href="/pedidos/novo"
-              className="flex size-13 items-center justify-center rounded-full bg-strawberry shadow-md shadow-strawberry/30 transition hover:brightness-110"
+              className="-mt-3 flex size-14 items-center justify-center rounded-full bg-strawberry shadow-md shadow-strawberry/30 transition hover:brightness-110"
               aria-label="Novo pedido"
             >
               <Plus className="size-6 text-white" strokeWidth={2.5} />
@@ -192,12 +244,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {BOTTOM_NAV.slice(2).map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = isTabActive(item.href, pathname);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center justify-center gap-1 min-h-14 text-[0.6rem] font-semibold transition-colors ${
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 min-h-14 text-[0.65rem] font-semibold transition-colors ${
                   active ? "text-strawberry" : "text-muted"
                 }`}
               >

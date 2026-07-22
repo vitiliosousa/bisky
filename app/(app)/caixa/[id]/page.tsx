@@ -41,11 +41,15 @@ export default function MovimentoDetalhePage() {
 
   const isEntrada = movimento.tipo === "entrada";
 
-  function apagar() {
+  async function apagar() {
     if (!confirmDelete(movimento!.descricao)) return;
-    removeMovimento(movimento!.id);
-    toast("Movimento apagado.", "info");
-    router.push("/caixa");
+    try {
+      await removeMovimento(movimento!.id);
+      toast("Movimento apagado.", "info");
+      router.push("/caixa");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   return (

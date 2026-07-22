@@ -4,23 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { consumoDoPedido } from "./cost";
-import {
-  clientes as clientesSeed,
-  contasPagar as contasPagarSeed,
-  eventos as eventosSeed,
-  gastoHistoricoExtra,
-  ingredientes as ingredientesSeed,
-  materiais as materiaisSeed,
-  movimentosCaixa as movimentosSeed,
-  pedidos as pedidosSeed,
-  perdas as perdasSeed,
-  produtos as produtosSeed,
-} from "./mock-data";
+import { api } from "./api";
+import type { BootstrapData } from "./bootstrap";
+import { mapBootstrap, mapPedido, mapProduto } from "./bootstrap";
+import { getToken } from "./auth";
 import type {
   Cliente,
   ContaPagar,
@@ -33,11 +25,10 @@ import type {
   Produto,
 } from "./types";
 
-function nid(prefix: string) {
-  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-}
-
 type Store = {
+  loading: boolean;
+  ready: boolean;
+  reload: () => Promise<void>;
   clientes: Cliente[];
   produtos: Produto[];
   ingredientes: Ingrediente[];
@@ -48,247 +39,364 @@ type Store = {
   perdas: Perda[];
   materiais: Material[];
   gastoExtra: Record<string, { pedidos: number; gasto: number }>;
-  // clientes
-  upsertCliente: (c: Omit<Cliente, "id"> & { id?: string }) => void;
-  removeCliente: (id: string) => void;
-  // produtos
-  upsertProduto: (p: Omit<Produto, "id"> & { id?: string }) => void;
-  removeProduto: (id: string) => void;
-  // ingredientes
-  upsertIngrediente: (i: Omit<Ingrediente, "id"> & { id?: string }) => void;
-  removeIngrediente: (id: string) => void;
-  // pedidos
-  upsertPedido: (p: Omit<Pedido, "id" | "criadoEm"> & { id?: string; criadoEm?: string }) => void;
-  removePedido: (id: string) => void;
-  atualizarEstado: (pedidoId: string, estado: Pedido["estado"]) => void;
-  consumirPedido: (pedidoId: string) => { ok: boolean; msg: string };
-  // caixa
-  upsertMovimento: (m: Omit<MovimentoCaixa, "id"> & { id?: string }) => void;
-  removeMovimento: (id: string) => void;
-  // contas pagar
-  upsertContaPagar: (c: Omit<ContaPagar, "id"> & { id?: string }) => void;
-  removeContaPagar: (id: string) => void;
-  // eventos
-  upsertEvento: (e: Omit<EventoCalendario, "id"> & { id?: string }) => void;
-  removeEvento: (id: string) => void;
-  // perdas
-  registarPerda: (p: Omit<Perda, "id">) => void;
-  removePerda: (id: string) => void;
-  // materiais
-  upsertMaterial: (m: Omit<Material, "id"> & { id?: string }) => void;
-  removeMaterial: (id: string) => void;
+  upsertCliente: (c: Omit<Cliente, "id"> & { id?: string }) => Promise<void>;
+  removeCliente: (id: string) => Promise<void>;
+  upsertProduto: (p: Omit<Produto, "id"> & { id?: string }) => Promise<void>;
+  removeProduto: (id: string) => Promise<void>;
+  upsertIngrediente: (i: Omit<Ingrediente, "id"> & { id?: string }) => Promise<void>;
+  removeIngrediente: (id: string) => Promise<void>;
+  upsertPedido: (
+    p: Omit<Pedido, "id" | "criadoEm"> & { id?: string; criadoEm?: string },
+  ) => Promise<void>;
+  removePedido: (id: string) => Promise<void>;
+  atualizarEstado: (pedidoId: string, estado: Pedido["estado"]) => Promise<void>;
+  consumirPedido: (pedidoId: string) => Promise<{ ok: boolean; msg: string }>;
+  upsertMovimento: (m: Omit<MovimentoCaixa, "id"> & { id?: string }) => Promise<void>;
+  removeMovimento: (id: string) => Promise<void>;
+  upsertContaPagar: (c: Omit<ContaPagar, "id"> & { id?: string }) => Promise<void>;
+  removeContaPagar: (id: string) => Promise<void>;
+  upsertEvento: (e: Omit<EventoCalendario, "id"> & { id?: string }) => Promise<void>;
+  removeEvento: (id: string) => Promise<void>;
+  registarPerda: (p: Omit<Perda, "id">) => Promise<void>;
+  removePerda: (id: string) => Promise<void>;
+  upsertMaterial: (m: Omit<Material, "id"> & { id?: string }) => Promise<void>;
+  removeMaterial: (id: string) => Promise<void>;
 };
 
 const StoreCtx = createContext<Store | null>(null);
 
+const emptyGasto: Record<string, { pedidos: number; gasto: number }> = {};
+
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [clientes, setClientes] = useState(clientesSeed);
-  const [produtos, setProdutos] = useState(produtosSeed);
-  const [ingredientes, setIngredientes] = useState(ingredientesSeed);
-  const [pedidos, setPedidos] = useState(pedidosSeed);
-  const [contasPagar, setContasPagar] = useState(contasPagarSeed);
-  const [movimentos, setMovimentos] = useState(movimentosSeed);
-  const [eventos, setEventos] = useState(eventosSeed);
-  const [perdas, setPerdas] = useState<Perda[]>(perdasSeed);
-  const [materiais, setMateriais] = useState<Material[]>(materiaisSeed);
-  const [gastoExtra] = useState(gastoHistoricoExtra);
+  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [ingredientes, setIngredientes] = useState<Ingrediente[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [contasPagar, setContasPagar] = useState<ContaPagar[]>([]);
+  const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+  const [eventos, setEventos] = useState<EventoCalendario[]>([]);
+  const [perdas, setPerdas] = useState<Perda[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [gastoExtra] = useState(emptyGasto);
+
+  const applyBootstrap = useCallback((data: BootstrapData) => {
+    const mapped = mapBootstrap(data);
+    setClientes(mapped.clientes);
+    setProdutos(mapped.produtos);
+    setIngredientes(mapped.ingredientes);
+    setPedidos(mapped.pedidos);
+    setContasPagar(mapped.contasPagar);
+    setMovimentos(mapped.movimentos);
+    setEventos(mapped.eventos);
+    setPerdas(mapped.perdas);
+    setMateriais(mapped.materiais);
+  }, []);
+
+  const reload = useCallback(async () => {
+    if (!getToken()) {
+      setLoading(false);
+      setReady(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await api<BootstrapData>("/api/bootstrap");
+      applyBootstrap(data);
+      setReady(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [applyBootstrap]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   const upsertCliente = useCallback(
-    (c: Omit<Cliente, "id"> & { id?: string }) => {
-      setClientes((prev) => {
-        if (c.id) return prev.map((x) => (x.id === c.id ? { ...x, ...c, id: c.id } : x));
-        return [...prev, { ...c, id: nid("c") }];
-      });
+    async (c: Omit<Cliente, "id"> & { id?: string }) => {
+      if (c.id) {
+        const updated = await api<Cliente>(`/api/clientes/${c.id}`, {
+          method: "PUT",
+          body: JSON.stringify(c),
+        });
+        setClientes((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
+      } else {
+        const created = await api<Cliente>("/api/clientes", {
+          method: "POST",
+          body: JSON.stringify(c),
+        });
+        setClientes((prev) => [...prev, created]);
+      }
     },
     [],
   );
-  const removeCliente = useCallback((id: string) => {
+
+  const removeCliente = useCallback(async (id: string) => {
+    await api(`/api/clientes/${id}`, { method: "DELETE" });
     setClientes((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const upsertProduto = useCallback(
-    (p: Omit<Produto, "id"> & { id?: string }) => {
-      setProdutos((prev) => {
-        if (p.id) return prev.map((x) => (x.id === p.id ? { ...x, ...p, id: p.id } : x));
-        return [...prev, { ...p, id: nid("p") }];
-      });
+    async (p: Omit<Produto, "id"> & { id?: string }) => {
+      const body = {
+        nome: p.nome,
+        categoria: p.categoria,
+        preco: p.preco,
+        receita: p.receita,
+        modoPreparo: p.modoPreparo ?? [],
+        materiaisNecessarios: p.materiaisNecessarios ?? [],
+      };
+      if (p.id) {
+        const updated = await api<Produto>(`/api/produtos/${p.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setProdutos((prev) =>
+          prev.map((x) => (x.id === p.id ? mapProduto(updated) : x)),
+        );
+      } else {
+        const created = await api<Produto>("/api/produtos", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setProdutos((prev) => [...prev, mapProduto(created)]);
+      }
     },
     [],
   );
-  const removeProduto = useCallback((id: string) => {
+
+  const removeProduto = useCallback(async (id: string) => {
+    await api(`/api/produtos/${id}`, { method: "DELETE" });
     setProdutos((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const upsertIngrediente = useCallback(
-    (i: Omit<Ingrediente, "id"> & { id?: string }) => {
-      setIngredientes((prev) => {
-        if (i.id) return prev.map((x) => (x.id === i.id ? { ...x, ...i, id: i.id } : x));
-        return [...prev, { ...i, id: nid("i") }];
-      });
+    async (i: Omit<Ingrediente, "id"> & { id?: string }) => {
+      if (i.id) {
+        const updated = await api<Ingrediente>(`/api/ingredientes/${i.id}`, {
+          method: "PUT",
+          body: JSON.stringify(i),
+        });
+        setIngredientes((prev) => prev.map((x) => (x.id === i.id ? updated : x)));
+      } else {
+        const created = await api<Ingrediente>("/api/ingredientes", {
+          method: "POST",
+          body: JSON.stringify(i),
+        });
+        setIngredientes((prev) => [...prev, created]);
+      }
     },
     [],
   );
-  const removeIngrediente = useCallback((id: string) => {
+
+  const removeIngrediente = useCallback(async (id: string) => {
+    await api(`/api/ingredientes/${id}`, { method: "DELETE" });
     setIngredientes((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const upsertPedido = useCallback(
-    (p: Omit<Pedido, "id" | "criadoEm"> & { id?: string; criadoEm?: string }) => {
-      setPedidos((prev) => {
-        if (p.id)
-          return prev.map((x) =>
-            x.id === p.id ? { ...x, ...p, id: p.id, criadoEm: x.criadoEm } : x,
-          );
-        return [
-          ...prev,
-          {
-            ...p,
-            id: nid("ped"),
-            criadoEm: p.criadoEm ?? new Date().toISOString().slice(0, 10),
-          },
-        ];
-      });
+    async (
+      p: Omit<Pedido, "id" | "criadoEm"> & { id?: string; criadoEm?: string },
+    ) => {
+      const body = {
+        clienteId: p.clienteId,
+        itens: p.itens,
+        dataEntrega: p.dataEntrega,
+        hora: p.hora,
+        valor: p.valor,
+        pago: p.pago,
+        estado: p.estado,
+        estoqueConsumido: p.estoqueConsumido,
+      };
+      if (p.id) {
+        const updated = await api<Pedido>(`/api/pedidos/${p.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setPedidos((prev) =>
+          prev.map((x) => (x.id === p.id ? mapPedido(updated) : x)),
+        );
+      } else {
+        const created = await api<Pedido>("/api/pedidos", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setPedidos((prev) => [...prev, mapPedido(created)]);
+      }
     },
     [],
   );
-  const removePedido = useCallback((id: string) => {
+
+  const removePedido = useCallback(async (id: string) => {
+    await api(`/api/pedidos/${id}`, { method: "DELETE" });
     setPedidos((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const atualizarEstado = useCallback(
-    (pedidoId: string, estado: Pedido["estado"]) => {
-      setPedidos((prev) =>
-        prev.map((p) => (p.id === pedidoId ? { ...p, estado } : p)),
-      );
+    async (pedidoId: string, estado: Pedido["estado"]) => {
+      const pedido = pedidos.find((p) => p.id === pedidoId);
+      if (!pedido) return;
+      await upsertPedido({ ...pedido, estado });
     },
-    [],
+    [pedidos, upsertPedido],
   );
 
   const consumirPedido = useCallback(
-    (pedidoId: string) => {
-      const pedido = pedidos.find((p) => p.id === pedidoId);
-      if (!pedido) return { ok: false, msg: "Pedido não encontrado." };
-      if (pedido.estado === "cancelado")
-        return { ok: false, msg: "Pedido cancelado — sem consumo." };
-      if (pedido.estoqueConsumido)
-        return { ok: false, msg: "O estoque já foi aplicado a este pedido." };
-
-      const consumo = consumoDoPedido(pedido, produtos, ingredientes);
-      const insuf = consumo.find((c) => {
-        const ing = ingredientes.find((i) => i.id === c.ingredienteId)!;
-        return ing.quantidadeAtual < c.quantidade;
-      });
-      if (insuf) {
-        return { ok: false, msg: `Estoque insuficiente de ${insuf.nome}.` };
+    async (pedidoId: string) => {
+      try {
+        const res = await api<{ ok: boolean; msg: string }>(
+          `/api/pedidos/${pedidoId}/consumir`,
+          { method: "POST" },
+        );
+        await reload();
+        return res;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erro ao consumir estoque.";
+        return { ok: false, msg };
       }
-
-      setIngredientes((prev) =>
-        prev.map((ing) => {
-          const c = consumo.find((x) => x.ingredienteId === ing.id);
-          if (!c) return ing;
-          return {
-            ...ing,
-            quantidadeAtual:
-              Math.round((ing.quantidadeAtual - c.quantidade) * 1000) / 1000,
-          };
-        }),
-      );
-
-      setMateriais((prev) =>
-        prev.map((mat) => {
-          let total = 0;
-          for (const item of pedido.itens) {
-            const prod = produtos.find((p) => p.id === item.produtoId);
-            const matNec = prod?.materiaisNecessarios?.find((m) => m.materialId === mat.id);
-            if (matNec) total += matNec.quantidade * item.quantidade;
-          }
-          if (total === 0) return mat;
-          return { ...mat, quantidade: Math.max(0, Math.round((mat.quantidade - total) * 1000) / 1000) };
-        }),
-      );
-
-      setPedidos((prev) =>
-        prev.map((p) =>
-          p.id === pedidoId ? { ...p, estoqueConsumido: true } : p,
-        ),
-      );
-      return { ok: true, msg: "Estoque e materiais actualizados com o consumo do pedido." };
     },
-    [ingredientes, pedidos, produtos],
+    [reload],
   );
 
   const upsertMovimento = useCallback(
-    (m: Omit<MovimentoCaixa, "id"> & { id?: string }) => {
-      setMovimentos((prev) => {
-        if (m.id) return prev.map((x) => (x.id === m.id ? { ...x, ...m, id: m.id } : x));
-        return [...prev, { ...m, id: nid("m") }];
-      });
+    async (m: Omit<MovimentoCaixa, "id"> & { id?: string }) => {
+      if (m.id) {
+        const updated = await api<MovimentoCaixa>(`/api/movimentos/${m.id}`, {
+          method: "PUT",
+          body: JSON.stringify(m),
+        });
+        setMovimentos((prev) => prev.map((x) => (x.id === m.id ? updated : x)));
+      } else {
+        const created = await api<MovimentoCaixa>("/api/movimentos", {
+          method: "POST",
+          body: JSON.stringify(m),
+        });
+        setMovimentos((prev) => [created, ...prev]);
+      }
     },
     [],
   );
-  const removeMovimento = useCallback((id: string) => {
+
+  const removeMovimento = useCallback(async (id: string) => {
+    await api(`/api/movimentos/${id}`, { method: "DELETE" });
     setMovimentos((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const upsertContaPagar = useCallback(
-    (c: Omit<ContaPagar, "id"> & { id?: string }) => {
-      setContasPagar((prev) => {
-        if (c.id) return prev.map((x) => (x.id === c.id ? { ...x, ...c, id: c.id } : x));
-        return [...prev, { ...c, id: nid("cp") }];
-      });
+    async (c: Omit<ContaPagar, "id"> & { id?: string }) => {
+      const body = {
+        fornecedor: c.fornecedor,
+        descricao: c.descricao,
+        valor: c.valor,
+        vencimento: c.vencimento,
+        paga: c.paga,
+      };
+      if (c.id) {
+        const updated = await api<ContaPagar>(`/api/contas-pagar/${c.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setContasPagar((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
+      } else {
+        const created = await api<ContaPagar>("/api/contas-pagar", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setContasPagar((prev) => [...prev, created]);
+      }
     },
     [],
   );
-  const removeContaPagar = useCallback((id: string) => {
+
+  const removeContaPagar = useCallback(async (id: string) => {
+    await api(`/api/contas-pagar/${id}`, { method: "DELETE" });
     setContasPagar((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
-  const registarPerda = useCallback(
-    (p: Omit<Perda, "id">) => {
-      const perda: Perda = { ...p, id: nid("per") };
-      setPerdas((prev) => [perda, ...prev]);
-      setIngredientes((prev) =>
-        prev.map((ing) =>
-          ing.id === p.ingredienteId
-            ? { ...ing, quantidadeAtual: Math.max(0, Math.round((ing.quantidadeAtual - p.quantidade) * 1000) / 1000) }
-            : ing,
-        ),
-      );
+  const upsertEvento = useCallback(
+    async (e: Omit<EventoCalendario, "id"> & { id?: string }) => {
+      const body = {
+        titulo: e.titulo,
+        data: e.data,
+        hora: e.hora,
+        tipo: e.tipo,
+        pedidoId: e.pedidoId,
+      };
+      if (e.id) {
+        const updated = await api<EventoCalendario>(`/api/eventos/${e.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setEventos((prev) => prev.map((x) => (x.id === e.id ? updated : x)));
+      } else {
+        const created = await api<EventoCalendario>("/api/eventos", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setEventos((prev) => [...prev, created]);
+      }
     },
     [],
   );
-  const removePerda = useCallback((id: string) => {
+
+  const removeEvento = useCallback(async (id: string) => {
+    await api(`/api/eventos/${id}`, { method: "DELETE" });
+    setEventos((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
+  const registarPerda = useCallback(async (p: Omit<Perda, "id">) => {
+    const created = await api<Perda>("/api/perdas", {
+      method: "POST",
+      body: JSON.stringify(p),
+    });
+    setPerdas((prev) => [created, ...prev]);
+    await reload();
+  }, [reload]);
+
+  const removePerda = useCallback(async (id: string) => {
+    await api(`/api/perdas/${id}`, { method: "DELETE" });
     setPerdas((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const upsertMaterial = useCallback(
-    (m: Omit<Material, "id"> & { id?: string }) => {
-      setMateriais((prev) => {
-        if (m.id) return prev.map((x) => (x.id === m.id ? { ...x, ...m, id: m.id } : x));
-        return [...prev, { ...m, id: nid("mat") }];
-      });
+    async (m: Omit<Material, "id"> & { id?: string }) => {
+      const body = {
+        nome: m.nome,
+        categoria: m.categoria,
+        quantidade: m.quantidade,
+        unidade: m.unidade,
+        precoUnitario: m.precoUnitario,
+        estoqueMinimo: m.estoqueMinimo,
+      };
+      if (m.id) {
+        const updated = await api<Material>(`/api/materiais/${m.id}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setMateriais((prev) => prev.map((x) => (x.id === m.id ? updated : x)));
+      } else {
+        const created = await api<Material>("/api/materiais", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        setMateriais((prev) => [...prev, created]);
+      }
     },
     [],
   );
-  const removeMaterial = useCallback((id: string) => {
-    setMateriais((prev) => prev.filter((x) => x.id !== id));
-  }, []);
 
-  const upsertEvento = useCallback(
-    (e: Omit<EventoCalendario, "id"> & { id?: string }) => {
-      setEventos((prev) => {
-        if (e.id) return prev.map((x) => (x.id === e.id ? { ...x, ...e, id: e.id } : x));
-        return [...prev, { ...e, id: nid("e") }];
-      });
-    },
-    [],
-  );
-  const removeEvento = useCallback((id: string) => {
-    setEventos((prev) => prev.filter((x) => x.id !== id));
+  const removeMaterial = useCallback(async (id: string) => {
+    await api(`/api/materiais/${id}`, { method: "DELETE" });
+    setMateriais((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const value = useMemo(
     () => ({
+      loading,
+      ready,
+      reload,
       clientes,
       produtos,
       ingredientes,
@@ -321,6 +429,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeMaterial,
     }),
     [
+      loading,
+      ready,
+      reload,
       clientes,
       produtos,
       ingredientes,

@@ -105,7 +105,7 @@ export function PedidoForm({
     setEdit({ ...edit, itens });
   }
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.clienteId) {
       toast("Selecione um cliente.", "info");
@@ -116,18 +116,22 @@ export function PedidoForm({
       toast("Adicione pelo menos um produto.", "info");
       return;
     }
-    upsertPedido({
-      ...edit,
-      itens: itens.map((i) => ({
-        ...i,
-        receitaAjustada: i.receitaAjustada?.filter((r) => r.quantidade > 0),
-      })),
-      valor: Number(edit.valor) || recalcValor(itens),
-      pago: Number(edit.pago) || 0,
-      estado: edit.id ? edit.estado : "pendente",
-    });
-    toast(edit.id ? "Pedido atualizado." : "Pedido criado.");
-    onDone();
+    try {
+      await upsertPedido({
+        ...edit,
+        itens: itens.map((i) => ({
+          ...i,
+          receitaAjustada: i.receitaAjustada?.filter((r) => r.quantidade > 0),
+        })),
+        valor: Number(edit.valor) || recalcValor(itens),
+        pago: Number(edit.pago) || 0,
+        estado: edit.id ? edit.estado : "pendente",
+      });
+      toast(edit.id ? "Pedido atualizado." : "Pedido criado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

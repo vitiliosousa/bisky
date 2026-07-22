@@ -1,7 +1,8 @@
 "use client";
 
 import { PerfilForm } from "@/components/PerfilForm";
-import { getPerfil, type PerfilUtilizador } from "@/lib/profile";
+import { fetchMe, profileFromUser } from "@/lib/auth";
+import type { PerfilUtilizador } from "@/lib/profile";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,9 @@ export default function EditarPerfilPage() {
   const [perfil, setPerfil] = useState<PerfilUtilizador | null>(null);
 
   useEffect(() => {
-    setPerfil(getPerfil());
+    fetchMe()
+      .then((me) => setPerfil(profileFromUser(me)))
+      .catch(() => setPerfil(null));
   }, []);
 
   if (!perfil) {

@@ -28,13 +28,20 @@ export default function PerdasPage() {
 
   const ing = ingredientes.find((i) => i.id === ingId);
 
-  function submeter(e: React.FormEvent) {
+  async function submeter(e: React.FormEvent) {
     e.preventDefault();
     const qty = Number(quantidade);
     if (!ingId || !qty || qty <= 0) return;
-    registarPerda({ ingredienteId: ingId, quantidade: qty, motivo, data });
-    setQuantidade("");
-    toast(`Perda de ${formatQty(qty, ing?.unidade as Unidade)} de ${ing?.nome} registada.`, "info");
+    try {
+      await registarPerda({ ingredienteId: ingId, quantidade: qty, motivo, data });
+      setQuantidade("");
+      toast(
+        `Perda de ${formatQty(qty, ing?.unidade as Unidade)} de ${ing?.nome} registada.`,
+        "info",
+      );
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao registar.", "error");
+    }
   }
 
   return (
@@ -70,7 +77,16 @@ export default function PerdasPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removePerda(p.id)}
+                      onClick={async () => {
+                        try {
+                          await removePerda(p.id);
+                        } catch (err) {
+                          toast(
+                            err instanceof Error ? err.message : "Erro ao apagar.",
+                            "error",
+                          );
+                        }
+                      }}
                       className="shrink-0 rounded-full p-1.5 text-muted transition hover:text-strawberry"
                       aria-label="Remover"
                     >

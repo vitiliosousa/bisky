@@ -1,3 +1,5 @@
+import { api } from "./api";
+
 export interface PerfilUtilizador {
   nome: string;
   email: string;
@@ -9,37 +11,53 @@ export interface PerfilUtilizador {
 }
 
 export const PERFIL_PADRAO: PerfilUtilizador = {
-  nome: "Adélia Machava",
-  email: "adelia@email.com",
-  telefone: "+258 84 123 4567",
-  endereco: "Maputo, Moçambique",
-  negocio: "Confeitaria Bisky",
+  nome: "",
+  email: "",
+  telefone: "",
+  endereco: "",
+  negocio: "",
   papel: "Confeiteira",
-  bio: "Bolos, doces e encomendas feitas com carinho.",
+  bio: "",
 };
 
-const STORAGE_KEY = "bisky_profile";
+type ApiProfile = {
+  nome: string;
+  telefone: string;
+  endereco: string;
+  negocio: string;
+  papel: string;
+  bio: string;
+};
 
-export function getPerfil(): PerfilUtilizador {
-  if (typeof window === "undefined") return PERFIL_PADRAO;
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const perfil: PerfilUtilizador = raw
-      ? { ...PERFIL_PADRAO, ...JSON.parse(raw) }
-      : { ...PERFIL_PADRAO };
-
-    const nomeLogin = localStorage.getItem("cakescontrol_user");
-    if (nomeLogin?.trim()) perfil.nome = nomeLogin.trim();
-
-    return perfil;
-  } catch {
-    return { ...PERFIL_PADRAO };
-  }
+export async function fetchPerfil(email?: string): Promise<PerfilUtilizador> {
+  const profile = await api<ApiProfile>("/api/profile");
+  return {
+    nome: profile.nome,
+    email: email ?? "",
+    telefone: profile.telefone,
+    endereco: profile.endereco,
+    negocio: profile.negocio,
+    papel: profile.papel,
+    bio: profile.bio,
+  };
 }
 
-export function savePerfil(perfil: PerfilUtilizador) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(perfil));
-  localStorage.setItem("cakescontrol_user", perfil.nome.trim());
+export async function savePerfil(perfil: PerfilUtilizador) {
+  await api("/api/profile", {
+    method: "PATCH",
+    body: JSON.stringify({
+      nome: perfil.nome.trim(),
+      telefone: perfil.telefone.trim(),
+      endereco: perfil.endereco.trim(),
+      negocio: perfil.negocio.trim(),
+      papel: perfil.papel.trim(),
+      bio: perfil.bio.trim(),
+    }),
+  });
   window.dispatchEvent(new CustomEvent("bisky:profile-updated"));
+}
+
+/** @deprecated use fetchPerfil */
+export function getPerfil(): PerfilUtilizador {
+  return PERFIL_PADRAO;
 }

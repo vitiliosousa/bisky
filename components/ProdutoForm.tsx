@@ -113,18 +113,24 @@ export function ProdutoForm({
     setEdit({ ...edit, materiaisNecessarios: mats });
   }
 
-  function onSubmit(e: FormSubmit) {
+  async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
-    upsertProduto({
-      ...edit,
-      preco: Number(edit.preco) || 0,
-      receita: edit.receita.filter((r) => r.quantidade > 0),
-      modoPreparo: edit.modoPreparo?.filter((s) => s.trim()) || undefined,
-      materiaisNecessarios: (edit.materiaisNecessarios ?? []).filter((m) => m.quantidade > 0),
-    });
-    toast(edit.id ? "Produto atualizado." : "Produto criado.");
-    onDone();
+    try {
+      await upsertProduto({
+        ...edit,
+        preco: Number(edit.preco) || 0,
+        receita: edit.receita.filter((r) => r.quantidade > 0),
+        modoPreparo: edit.modoPreparo?.filter((s) => s.trim()) || undefined,
+        materiaisNecessarios: (edit.materiaisNecessarios ?? []).filter(
+          (m) => m.quantidade > 0,
+        ),
+      });
+      toast(edit.id ? "Produto atualizado." : "Produto criado.");
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    }
   }
 
   return (

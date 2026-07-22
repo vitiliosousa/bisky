@@ -50,11 +50,15 @@ export default function ProdutoDetalhePage() {
   const sugerido = precoSugerido(custo);
   const lucro = produto.preco - custo;
 
-  function apagar() {
+  async function apagar() {
     if (!confirmDelete(produto!.nome)) return;
-    removeProduto(produto!.id);
-    toast("Produto apagado.", "info");
-    router.push("/produtos");
+    try {
+      await removeProduto(produto!.id);
+      toast("Produto apagado.", "info");
+      router.push("/produtos");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
+    }
   }
 
   return (
