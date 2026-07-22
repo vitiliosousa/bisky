@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { confirmDelete, toast } from "@/components/ui";
 import { HOJE, dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
@@ -140,11 +141,10 @@ export default function ContasPagarPage() {
 
       {filtered.length === 0 ? (
         <div className="card">
-          <p className="py-10 text-center text-sm text-muted">
-            {busca || filtro !== "todas"
-              ? "Nenhuma conta encontrada."
-              : "Sem contas. Adicione a primeira."}
-          </p>
+          <Empty
+            message={busca || filtro !== "todas" ? "Nenhuma conta encontrada." : "Sem contas a pagar ainda."}
+            hint={busca || filtro !== "todas" ? undefined : "Adicione a sua primeira conta."}
+          />
         </div>
       ) : (
         <div className="card p-2!">

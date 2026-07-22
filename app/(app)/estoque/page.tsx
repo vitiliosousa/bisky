@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { confirmDelete, toast } from "@/components/ui";
 import { custoUnitario, formatQty } from "@/lib/cost";
 import { mzn } from "@/lib/format";
@@ -116,11 +117,10 @@ export default function EstoquePage() {
 
       {filtered.length === 0 ? (
         <div className="card">
-          <p className="py-10 text-center text-sm text-muted">
-            {busca || filtro !== "todos"
-              ? "Nenhum ingrediente encontrado."
-              : "Sem ingredientes. Adicione o primeiro."}
-          </p>
+          <Empty
+            message={busca || filtro !== "todos" ? "Nenhum ingrediente encontrado." : "Sem ingredientes ainda."}
+            hint={busca || filtro !== "todos" ? undefined : "Adicione o seu primeiro ingrediente."}
+          />
         </div>
       ) : (
         <div className="card p-2!">

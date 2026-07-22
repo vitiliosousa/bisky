@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
@@ -126,11 +127,10 @@ export default function CaixaPage() {
       {/* ── Lista ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="card">
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            {busca || tipo !== "todos"
-              ? "Nenhum movimento encontrado."
-              : "Sem movimentos. Registe o primeiro."}
-          </p>
+          <Empty
+            message={busca || tipo !== "todos" ? "Nenhum movimento encontrado." : "Sem movimentos ainda."}
+            hint={busca || tipo !== "todos" ? undefined : "Registe o primeiro movimento de caixa."}
+          />
         </div>
       ) : (
         <div className="card p-2!">

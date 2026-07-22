@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { confirmDelete, toast } from "@/components/ui";
 import { consumoDoPedido, formatQty } from "@/lib/cost";
 import { HOJE, dataCurta, mzn } from "@/lib/format";
@@ -133,9 +134,7 @@ function PedidosContent() {
 
       {pedidosFiltrados.length === 0 ? (
         <div className="card">
-          <p className="py-10 text-center text-sm text-muted">
-            Nenhum pedido encontrado.
-          </p>
+          <Empty message="Nenhum pedido encontrado." />
         </div>
       ) : (
         <div className="card p-2!">

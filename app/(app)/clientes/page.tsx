@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { useStore } from "@/lib/store";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
@@ -66,9 +67,10 @@ export default function ClientesPage() {
       {/* ── Lista alfabética ────────────────────────────────── */}
       {total === 0 ? (
         <div className="card">
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            {busca ? "Nenhum cliente encontrado." : "Sem clientes. Adicione o primeiro."}
-          </p>
+          <Empty
+            message={busca ? "Nenhum cliente encontrado." : "Sem clientes ainda."}
+            hint={busca ? undefined : "Adicione o seu primeiro cliente."}
+          />
         </div>
       ) : (
         <div className="card p-0! overflow-hidden">

@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { confirmDelete, toast } from "@/components/ui";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
@@ -102,9 +103,10 @@ export default function MateriaisPage() {
 
       {filtered.length === 0 ? (
         <div className="card">
-          <p className="py-10 text-center text-sm text-muted">
-            {busca || filtro !== "todos" ? "Nenhum material encontrado." : "Sem materiais. Adicione o primeiro."}
-          </p>
+          <Empty
+            message={busca || filtro !== "todos" ? "Nenhum material encontrado." : "Sem materiais ainda."}
+            hint={busca || filtro !== "todos" ? undefined : "Adicione o seu primeiro material."}
+          />
         </div>
       ) : (
         <div className="card p-2!">

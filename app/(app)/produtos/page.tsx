@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { custoProduto, margemLucro } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
@@ -229,11 +230,10 @@ export default function ProdutosPage() {
       {/* ── Produtos ───────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="card">
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            {busca || categoria
-              ? "Nenhum produto encontrado."
-              : "Sem produtos. Adicione o primeiro."}
-          </p>
+          <Empty
+            message={busca || categoria ? "Nenhum produto encontrado." : "Sem produtos ainda."}
+            hint={busca || categoria ? undefined : "Adicione o seu primeiro produto."}
+          />
         </div>
       ) : view === "grid" ? (
         <GridProdutos produtos={filtered} ingredientes={ingredientes} />

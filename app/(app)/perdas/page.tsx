@@ -1,5 +1,6 @@
 "use client";
 
+import { Empty } from "@/components/Empty";
 import { toast } from "@/components/ui";
 import { formatQty } from "@/lib/cost";
 import { HOJE, dataCurta } from "@/lib/format";
@@ -55,9 +56,7 @@ export default function PerdasPage() {
           </div>
 
           {perdas.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted">
-              Sem perdas registadas. Ótimo sinal!
-            </p>
+            <Empty message="Sem perdas registadas." hint="Ótimo sinal!" />
           ) : (
             <ul className="divide-y divide-line">
               {perdas.map((p) => {
