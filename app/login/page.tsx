@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Lock, Loader2, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Loader2, Mail } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { login, register } from "@/lib/auth";
 
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [modo, setModo] = useState<"login" | "register">("login");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,7 +119,7 @@ export default function LoginPage() {
                 <Lock className="size-4 shrink-0 text-muted" strokeWidth={1.75} />
                 <input
                   name="pass"
-                  type="password"
+                  type={mostrarSenha ? "text" : "password"}
                   required
                   minLength={6}
                   autoComplete={
@@ -127,6 +128,18 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  className="shrink-0 text-muted transition hover:text-ink"
+                  aria-label={mostrarSenha ? "Esconder senha" : "Mostrar senha"}
+                >
+                  {mostrarSenha ? (
+                    <EyeOff className="size-4" strokeWidth={1.75} />
+                  ) : (
+                    <Eye className="size-4" strokeWidth={1.75} />
+                  )}
+                </button>
               </span>
             </label>
 
@@ -166,6 +179,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setModo("register");
                     setErro("");
+                    setMostrarSenha(false);
                   }}
                   className="font-semibold text-strawberry hover:underline"
                 >
@@ -180,6 +194,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setModo("login");
                     setErro("");
+                    setMostrarSenha(false);
                   }}
                   className="font-semibold text-strawberry hover:underline"
                 >
