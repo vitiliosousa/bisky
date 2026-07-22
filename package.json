@@ -30,17 +30,5 @@
   "allowScripts": {
     "sharp@0.34.5": true,
     "unrs-resolver@1.12.2": true
-  },
-  "pnpm": {
-    "overrides": {
-      "typescript-eslint": "8.64.0",
-      "@typescript-eslint/parser": "8.64.0",
-      "@typescript-eslint/eslint-plugin": "8.64.0",
-      "@typescript-eslint/typescript-estree": "8.64.0",
-      "@typescript-eslint/utils": "8.64.0",
-      "@typescript-eslint/types": "8.64.0",
-      "@typescript-eslint/scope-manager": "8.64.0",
-      "@typescript-eslint/visitor-keys": "8.64.0"
-    }
   }
 }
