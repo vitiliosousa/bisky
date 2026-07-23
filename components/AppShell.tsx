@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   CalendarDays,
-  Menu,
+  UserRound,
   Plus,
 } from "lucide-react";
 import { Header } from "./Header";
@@ -21,32 +21,10 @@ const BOTTOM_NAV = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/calendario", label: "Calendário", icon: CalendarDays },
-  { href: "/mais", label: "Mais", icon: Menu },
-];
-
-/** Rotas que pertencem ao tab "Mais" (para manter activo). */
-const MAIS_PREFIXES = [
-  "/mais",
-  "/clientes",
-  "/produtos",
-  "/estoque",
-  "/materiais",
-  "/perdas",
-  "/caixa",
-  "/contas-pagar",
-  "/relatorios",
-  "/perfil",
-  "/negocio",
-  "/financas",
-  "/notificacoes",
+  { href: "/perfil", label: "Perfil", icon: UserRound },
 ];
 
 function isTabActive(href: string, pathname: string) {
-  if (href === "/mais") {
-    return MAIS_PREFIXES.some(
-      (p) => pathname === p || pathname.startsWith(p + "/"),
-    );
-  }
   return pathname === href || pathname.startsWith(href + "/");
 }
 
@@ -108,10 +86,7 @@ function getPageInfo(pathname: string) {
   if (pathname === "/financas") {
     return { title: "Finanças", subtitle: "Caixa, contas e relatórios" };
   }
-  if (pathname === "/mais") {
-    return { title: "Mais", subtitle: "Todas as secções" };
-  }
-  if (pathname === "/perdas/novo") {
+if (pathname === "/perdas/novo") {
     return { title: "Nova perda", subtitle: "Registe um desperdício ou baixa" };
   }
   if (pathname === "/perdas") {
@@ -126,11 +101,14 @@ function getPageInfo(pathname: string) {
   if (pathname.includes("/materiais/") && pathname.endsWith("/editar")) {
     return { title: "Editar material", subtitle: "Actualize os dados" };
   }
-  if (pathname === "/estoque/novo") {
+  if (pathname === "/ingredientes/novo") {
     return { title: "Novo ingrediente", subtitle: "Cadastre no estoque" };
   }
-  if (pathname.startsWith("/estoque/") && pathname.endsWith("/editar")) {
+  if (pathname.startsWith("/ingredientes/") && pathname.endsWith("/editar")) {
     return { title: "Editar ingrediente", subtitle: "Atualize quantidade e custos" };
+  }
+  if (pathname === "/ingredientes") {
+    return { title: "Ingredientes", subtitle: "Ingredientes e quantidades" };
   }
   if (pathname === "/perfil/editar") {
     return { title: "Editar perfil", subtitle: "Atualize os seus dados" };
@@ -147,8 +125,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { loading: storeLoading } = useStore();
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState("");
-  const [papel, setPapel] = useState("Confeiteira");
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -156,11 +132,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    async function loadUser() {
+    async function checkAuth() {
       try {
-        const me = await fetchMe();
-        setUser(me.profile?.nome ?? me.email);
-        setPapel(me.profile?.papel ?? "Confeiteira");
+        await fetchMe();
         setReady(true);
       } catch {
         clearAuth();
@@ -168,30 +142,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
     }
 
-    function refreshUser() {
-      fetchMe()
-        .then((me) => {
-          setUser(me.profile?.nome ?? me.email);
-          setPapel(me.profile?.papel ?? "Confeiteira");
-        })
-        .catch(() => undefined);
-    }
-
-    loadUser();
-    window.addEventListener("bisky:profile-updated", refreshUser);
+    checkAuth();
     window.addEventListener("bisky:unauthorized", () => {
       clearAuth();
       router.replace("/login");
     });
-    return () => {
-      window.removeEventListener("bisky:profile-updated", refreshUser);
-    };
   }, [router]);
-
-  function sair() {
-    clearAuth();
-    router.replace("/login");
-  }
 
   if (!ready || storeLoading) {
     return (
@@ -215,7 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const page = getPageInfo(pathname);
-  const ROOT_TABS = ["/dashboard", "/pedidos", "/calendario", "/mais"];
+  const ROOT_TABS = ["/dashboard", "/pedidos", "/calendario", "/perfil"];
   const showBack = !ROOT_TABS.some(
     (t) => pathname === t || pathname.startsWith(t + "/"),
   );
@@ -228,9 +184,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Header
           pageTitle={page.title}
           pageSubtitle={page.subtitle}
-          user={user}
-          papel={papel}
-          onSair={sair}
           showBack={showBack}
           showLogo={pathname === "/dashboard"}
         />

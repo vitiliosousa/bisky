@@ -97,7 +97,9 @@ export interface EventoCalendario {
 
 export interface Perda {
   id: string;
-  ingredienteId: string;
+  tipo: "ingrediente" | "produto";
+  ingredienteId?: string;
+  produtoId?: string;
   quantidade: number;
   motivo: string;
   data: string;

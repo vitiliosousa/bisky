@@ -1,7 +1,7 @@
 "use client";
 
 import { FormActions, toast, type FormSubmit } from "@/components/ui";
-import { HOJE, labelsEvento } from "@/lib/format";
+import { hoje, labelsEvento } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { EventoCalendario, TipoEvento } from "@/lib/types";
 import { useState } from "react";
@@ -10,7 +10,7 @@ const TIPOS: TipoEvento[] = ["pedido", "casamento", "festa", "aniversario"];
 
 export type EventoDraft = Omit<EventoCalendario, "id"> & { id?: string };
 
-export function novoEventoDraft(data = HOJE): EventoDraft {
+export function novoEventoDraft(data = hoje()): EventoDraft {
   return {
     titulo: "",
     data,

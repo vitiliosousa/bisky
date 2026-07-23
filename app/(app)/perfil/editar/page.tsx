@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { PerfilForm } from "@/components/PerfilForm";
 import { fetchMe, profileFromUser } from "@/lib/auth";
@@ -28,8 +28,8 @@ export default function EditarPerfilPage() {
     <div className="animate-in space-y-5">
       <PerfilForm
         initial={perfil}
-        onDone={() => router.push("/perfil")}
-        onCancel={() => router.push("/perfil")}
+        onDone={() => router.replace("/perfil")}
+        onCancel={() => router.replace("/perfil")}
       />
     </div>
   );

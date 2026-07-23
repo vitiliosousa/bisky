@@ -1,7 +1,7 @@
 "use client";
 
 import { FormActions, toast, type FormSubmit } from "@/components/ui";
-import { custoItemReceita, custoProduto, margemLucro, precoSugerido } from "@/lib/cost";
+import { custoItemMaterial, custoItemReceita, custoProduto, margemLucro, precoSugerido } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ItemMaterial, ItemReceita, Produto, Unidade } from "@/lib/types";
@@ -45,13 +45,14 @@ export function ProdutoForm({
     const custo = custoProduto(
       { ...edit, id: edit.id ?? "", preco: Number(edit.preco) || 0 } as Produto,
       ingredientes,
+      materiais,
     );
     const preco = Number(edit.preco) || 0;
     const lucro = preco - custo;
     const margem = margemLucro(preco, custo);
     const sugerido = precoSugerido(custo);
     return { custo, lucro, margem, sugerido };
-  }, [edit.receita, edit.preco, ingredientes]);
+  }, [edit.receita, edit.materiaisNecessarios, edit.preco, ingredientes, materiais]);
 
   const disponiveis = useMemo(
     () =>
@@ -393,10 +394,11 @@ export function ProdutoForm({
             <ul className="space-y-2">
               {(edit.materiaisNecessarios ?? []).map((m, i) => {
                 const mat = materiais.find((x) => x.id === m.materialId);
+                const custoLinha = custoItemMaterial(m, materiais);
                 return (
                   <li
                     key={m.materialId}
-                    className="grid grid-cols-[minmax(0,1fr)_4.25rem_1.75rem] items-center gap-1 sm:grid-cols-[1fr_5rem_2.5rem] sm:gap-1.5"
+                    className="grid grid-cols-[minmax(0,1fr)_4.25rem_1.75rem] items-center gap-1 sm:grid-cols-[1fr_5rem_4.5rem_2.5rem] sm:gap-1.5"
                   >
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate rounded-full bg-[#f4f5f7] px-3 py-2.5 text-sm font-medium text-ink sm:px-3.5">
@@ -415,6 +417,9 @@ export function ProdutoForm({
                       value={m.quantidade || ""}
                       onChange={(e) => setLinhamat(i, { quantidade: Number(e.target.value) })}
                     />
+                    <span className="hidden text-right text-xs font-medium text-muted sm:block">
+                      {custoLinha > 0 ? mzn(Math.round(custoLinha)) : ""}
+                    </span>
                     <button
                       type="button"
                       className="flex items-center justify-center rounded-full text-muted transition hover:text-strawberry"

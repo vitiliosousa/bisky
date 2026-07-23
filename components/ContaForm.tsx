@@ -2,7 +2,7 @@
 
 import { toast, type FormSubmit } from "@/components/ui";
 import { Loader2 } from "lucide-react";
-import { HOJE } from "@/lib/format";
+import { hoje } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ContaPagar } from "@/lib/types";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { useState } from "react";
 export type ContaDraft = Omit<ContaPagar, "id"> & { id?: string };
 
 export function novaContaDraft(): ContaDraft {
-  return { fornecedor: "", descricao: "", valor: 0, vencimento: HOJE, paga: false };
+  return { fornecedor: "", descricao: "", valor: 0, vencimento: hoje(), paga: false };
 }
 
 export function ContaForm({

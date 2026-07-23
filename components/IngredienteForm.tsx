@@ -32,6 +32,7 @@ export function IngredienteForm({
   const { upsertIngrediente } = useStore();
   const [edit, setEdit] = useState<IngredienteDraft>(initial);
   const [loading, setLoading] = useState(false);
+  const isNovo = !initial.id;
 
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
@@ -40,12 +41,13 @@ export function IngredienteForm({
     try {
       await upsertIngrediente({
         ...edit,
-        quantidadeAtual: Number(edit.quantidadeAtual) || 0,
-        precoCompra: Number(edit.precoCompra) || 0,
-        quantidadeCompra: Number(edit.quantidadeCompra) || 1,
+        // Stock e compra só via "Registrar compra" no detalhe
+        quantidadeAtual: isNovo ? 0 : Number(initial.quantidadeAtual) || 0,
+        precoCompra: isNovo ? 0 : Number(initial.precoCompra) || 0,
+        quantidadeCompra: isNovo ? 1 : Number(initial.quantidadeCompra) || 1,
         estoqueMinimo: Number(edit.estoqueMinimo) || 0,
       });
-      toast(edit.id ? "Ingrediente atualizado." : "Ingrediente adicionado.");
+      toast(isNovo ? "Ingrediente adicionado." : "Ingrediente atualizado.");
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
@@ -59,7 +61,9 @@ export function IngredienteForm({
       <div className="card space-y-4">
         <div>
           <h2 className="text-base font-semibold text-ink">Dados do ingrediente</h2>
-          <p className="text-xs text-muted">Nome, quantidade e unidade</p>
+          <p className="text-xs text-muted">
+            Stock e compra registam-se no detalhe do ingrediente
+          </p>
         </div>
         <div className="form-grid sm:grid-cols-2 sm:gap-x-3">
           <label className="lbl sm:col-span-2">
@@ -70,19 +74,6 @@ export function IngredienteForm({
               placeholder="Ex.: Farinha de trigo"
               value={edit.nome}
               onChange={(e) => setEdit({ ...edit, nome: e.target.value })}
-            />
-          </label>
-          <label className="lbl">
-            Quantidade actual
-            <input
-              type="number"
-              step="any"
-              min={0}
-              className="field"
-              value={edit.quantidadeAtual || ""}
-              onChange={(e) =>
-                setEdit({ ...edit, quantidadeAtual: Number(e.target.value) })
-              }
             />
           </label>
           <label className="lbl">
@@ -111,42 +102,6 @@ export function IngredienteForm({
               value={edit.estoqueMinimo || ""}
               onChange={(e) =>
                 setEdit({ ...edit, estoqueMinimo: Number(e.target.value) })
-              }
-            />
-          </label>
-        </div>
-      </div>
-
-      <div className="card space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-ink">Compra</h2>
-          <p className="text-xs text-muted">
-            Usado para calcular o custo por unidade
-          </p>
-        </div>
-        <div className="form-grid sm:grid-cols-2 sm:gap-x-3">
-          <label className="lbl">
-            Qtd. do lote comprado
-            <input
-              type="number"
-              step="any"
-              min={0}
-              className="field"
-              value={edit.quantidadeCompra || ""}
-              onChange={(e) =>
-                setEdit({ ...edit, quantidadeCompra: Number(e.target.value) })
-              }
-            />
-          </label>
-          <label className="lbl">
-            Preço do lote (MZN)
-            <input
-              type="number"
-              min={0}
-              className="field"
-              value={edit.precoCompra || ""}
-              onChange={(e) =>
-                setEdit({ ...edit, precoCompra: Number(e.target.value) })
               }
             />
           </label>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { toast } from "@/components/ui";
 import { useStore } from "@/lib/store";
@@ -34,7 +34,7 @@ export default function NovoMaterialPage() {
         estoqueMinimo: Number(form.estoqueMinimo) || 0,
       });
       toast("Material criado.");
-      router.push("/materiais");
+      router.replace("/materiais");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
     }

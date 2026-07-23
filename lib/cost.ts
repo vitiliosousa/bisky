@@ -1,4 +1,12 @@
-import type { Ingrediente, ItemReceita, Pedido, Produto, Unidade } from "./types";
+import type {
+  Ingrediente,
+  ItemMaterial,
+  ItemReceita,
+  Material,
+  Pedido,
+  Produto,
+  Unidade,
+} from "./types";
 
 const toGramsOrMl: Record<Unidade, number> = {
   kg: 1000,
@@ -34,14 +42,29 @@ export function custoItemReceita(
   return qty * custoUnitario(ing);
 }
 
+export function custoItemMaterial(
+  item: ItemMaterial,
+  materiais: Material[],
+): number {
+  const mat = materiais.find((m) => m.id === item.materialId);
+  if (!mat) return 0;
+  return item.quantidade * mat.precoUnitario;
+}
+
 export function custoProduto(
   produto: Produto,
   ingredientes: Ingrediente[],
+  materiais: Material[] = [],
 ): number {
-  return produto.receita.reduce(
+  const custoIng = produto.receita.reduce(
     (sum, item) => sum + custoItemReceita(item, ingredientes),
     0,
   );
+  const custoMat = (produto.materiaisNecessarios ?? []).reduce(
+    (sum, item) => sum + custoItemMaterial(item, materiais),
+    0,
+  );
+  return custoIng + custoMat;
 }
 
 export function precoSugerido(custo: number, margem = 0.6): number {

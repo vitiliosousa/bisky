@@ -39,7 +39,7 @@ type Store = {
   perdas: Perda[];
   materiais: Material[];
   gastoExtra: Record<string, { pedidos: number; gasto: number }>;
-  upsertCliente: (c: Omit<Cliente, "id"> & { id?: string }) => Promise<void>;
+  upsertCliente: (c: Omit<Cliente, "id"> & { id?: string }) => Promise<Cliente>;
   removeCliente: (id: string) => Promise<void>;
   upsertProduto: (p: Omit<Produto, "id"> & { id?: string }) => Promise<void>;
   removeProduto: (id: string) => Promise<void>;
@@ -122,13 +122,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify(c),
         });
         setClientes((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
-      } else {
-        const created = await api<Cliente>("/api/clientes", {
-          method: "POST",
-          body: JSON.stringify(c),
-        });
-        setClientes((prev) => [...prev, created]);
+        return updated;
       }
+      const created = await api<Cliente>("/api/clientes", {
+        method: "POST",
+        body: JSON.stringify(c),
+      });
+      setClientes((prev) => [...prev, created]);
+      return created;
     },
     [],
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormActions, toast, type FormSubmit } from "@/components/ui";
-import { HOJE } from "@/lib/format";
+import { hoje } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ItemPedido, ItemReceita, Pedido, Unidade } from "@/lib/types";
 import { ChevronDown, Plus, Search, X } from "lucide-react";
@@ -15,7 +15,7 @@ export function novoPedidoDraft(): PedidoDraft {
   return {
     clienteId: "",
     itens: [],
-    dataEntrega: HOJE,
+    dataEntrega: hoje(),
     hora: "15:00",
     valor: 0,
     pago: 0,
@@ -32,11 +32,14 @@ export function PedidoForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const { clientes, produtos, ingredientes, upsertPedido } = useStore();
+  const { clientes, produtos, ingredientes, upsertPedido, upsertCliente } =
+    useStore();
   const [edit, setEdit] = useState<PedidoDraft>(initial);
 
   const [buscaCliente, setBuscaCliente] = useState("");
   const [clienteDropOpen, setClienteDropOpen] = useState(false);
+  /** Nome digitado para cliente ainda não cadastrado. */
+  const [clienteNovoNome, setClienteNovoNome] = useState("");
 
   const [buscaProduto, setBuscaProduto] = useState("");
   const [produtoDropOpen, setProdutoDropOpen] = useState(false);
@@ -47,6 +50,7 @@ export function PedidoForm({
   const [ingDropOpen, setIngDropOpen] = useState(false);
 
   const clienteSel = clientes.find((c) => c.id === edit.clienteId);
+  const nomeClienteLivre = clienteNovoNome.trim();
 
   const clientesFiltrados = useMemo(
     () =>
@@ -55,6 +59,12 @@ export function PedidoForm({
       ),
     [clientes, buscaCliente],
   );
+
+  const podeCriarCliente =
+    buscaCliente.trim().length > 0 &&
+    !clientes.some(
+      (c) => c.nome.toLowerCase() === buscaCliente.trim().toLowerCase(),
+    );
 
   const produtosFiltrados = useMemo(
     () =>
@@ -109,8 +119,33 @@ export function PedidoForm({
 
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
-    if (!edit.clienteId) {
-      toast("Selecione um cliente.", "info");
+    let clienteId = edit.clienteId;
+    const nomeLivre = (clienteNovoNome || buscaCliente).trim();
+    if (!clienteId && nomeLivre) {
+      const existente = clientes.find(
+        (c) => c.nome.toLowerCase() === nomeLivre.toLowerCase(),
+      );
+      if (existente) {
+        clienteId = existente.id;
+      } else {
+        try {
+          const criado = await upsertCliente({
+            nome: nomeLivre,
+            telefone: "",
+            endereco: "",
+          });
+          clienteId = criado.id;
+        } catch (err) {
+          toast(
+            err instanceof Error ? err.message : "Erro ao criar cliente.",
+            "error",
+          );
+          return;
+        }
+      }
+    }
+    if (!clienteId) {
+      toast("Indique o nome do cliente.", "info");
       return;
     }
     const itens = edit.itens.filter((i) => i.quantidade > 0 && i.produtoId);
@@ -122,6 +157,7 @@ export function PedidoForm({
     try {
       await upsertPedido({
         ...edit,
+        clienteId,
         itens: itens.map((i) => ({
           ...i,
           receitaAjustada: i.receitaAjustada?.filter((r) => r.quantidade > 0),
@@ -156,11 +192,22 @@ export function PedidoForm({
                 <Search className="size-4 shrink-0" strokeWidth={1.75} />
                 <input
                   type="search"
-                  placeholder={clienteSel ? clienteSel.nome : "Pesquisar cliente…"}
+                  placeholder={
+                    clienteSel
+                      ? clienteSel.nome
+                      : nomeClienteLivre
+                        ? nomeClienteLivre
+                        : "Nome do cliente…"
+                  }
                   value={buscaCliente}
                   onChange={(e) => {
                     setBuscaCliente(e.target.value);
                     setClienteDropOpen(true);
+                    // ao digitar, deixa de forçar o cliente seleccionado
+                    if (edit.clienteId) {
+                      setEdit({ ...edit, clienteId: "" });
+                    }
+                    setClienteNovoNome("");
                   }}
                   onFocus={() => setClienteDropOpen(true)}
                   onBlur={() => setTimeout(() => setClienteDropOpen(false), 150)}
@@ -168,9 +215,24 @@ export function PedidoForm({
               </label>
               {clienteDropOpen && (
                 <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-30 max-h-56 overflow-y-auto rounded-2xl border border-line bg-white py-1.5 shadow-(--shadow-modal)">
-                  {clientesFiltrados.length === 0 ? (
+                  {podeCriarCliente && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setClienteNovoNome(buscaCliente.trim());
+                        setEdit({ ...edit, clienteId: "" });
+                        setBuscaCliente("");
+                        setClienteDropOpen(false);
+                      }}
+                      className="flex w-full px-4 py-2.5 text-left text-sm font-medium text-strawberry transition hover:bg-strawberry-soft"
+                    >
+                      Usar «{buscaCliente.trim()}» (novo cliente)
+                    </button>
+                  )}
+                  {clientesFiltrados.length === 0 && !podeCriarCliente ? (
                     <p className="px-4 py-3 text-sm text-muted">
-                      Nenhum cliente encontrado.
+                      Escreva o nome do cliente.
                     </p>
                   ) : (
                     clientesFiltrados.map((c) => (
@@ -180,6 +242,7 @@ export function PedidoForm({
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
                           setEdit({ ...edit, clienteId: c.id });
+                          setClienteNovoNome("");
                           setBuscaCliente("");
                           setClienteDropOpen(false);
                         }}
@@ -196,11 +259,18 @@ export function PedidoForm({
                 </div>
               )}
             </div>
-            {clienteSel && (
+            {clienteSel ? (
               <p className="mt-1.5 text-xs text-muted">
-                Selecionado: <span className="font-semibold text-ink">{clienteSel.nome}</span>
+                Selecionado:{" "}
+                <span className="font-semibold text-ink">{clienteSel.nome}</span>
               </p>
-            )}
+            ) : nomeClienteLivre ? (
+              <p className="mt-1.5 text-xs text-muted">
+                Novo cliente:{" "}
+                <span className="font-semibold text-ink">{nomeClienteLivre}</span>
+                {" · "}será cadastrado ao guardar
+              </p>
+            ) : null}
           </div>
 
           <label className="lbl">

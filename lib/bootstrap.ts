@@ -41,7 +41,10 @@ export function mapBootstrap(data: BootstrapData) {
     contasPagar: data.contasPagar,
     movimentos: data.movimentos,
     eventos: data.eventos,
-    perdas: data.perdas,
+    perdas: data.perdas.map((p) => ({
+      ...p,
+      tipo: p.tipo ?? (p.produtoId ? "produto" : "ingrediente"),
+    })),
     materiais: data.materiais,
     gastoExtra: data.gastoExtra ?? {},
   };

@@ -4,7 +4,7 @@ import { Empty } from "@/components/Empty";
 import { custoProduto, margemLucro } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
-import type { Ingrediente, Produto } from "@/lib/types";
+import type { Ingrediente, Material, Produto } from "@/lib/types";
 import {
   ChevronRight,
   LayoutGrid,
@@ -39,14 +39,16 @@ function MargemBadge({ margem }: { margem: number }) {
 function GridProdutos({
   produtos,
   ingredientes,
+  materiais,
 }: {
   produtos: Produto[];
   ingredientes: Ingrediente[];
+  materiais: Material[];
 }) {
   return (
     <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 xl:gap-4">
       {produtos.map((p) => {
-        const custo = custoProduto(p, ingredientes);
+        const custo = custoProduto(p, ingredientes, materiais);
         const margem = margemLucro(p.preco, custo);
         return (
           <Link
@@ -91,15 +93,17 @@ function GridProdutos({
 function ListaProdutos({
   produtos,
   ingredientes,
+  materiais,
 }: {
   produtos: Produto[];
   ingredientes: Ingrediente[];
+  materiais: Material[];
 }) {
   return (
     <div className="card p-2!">
       <ul className="divide-y divide-line">
         {produtos.map((p) => {
-          const custo = custoProduto(p, ingredientes);
+          const custo = custoProduto(p, ingredientes, materiais);
           const margem = margemLucro(p.preco, custo);
           return (
             <li key={p.id}>
@@ -138,7 +142,7 @@ function ListaProdutos({
 }
 
 export default function ProdutosPage() {
-  const { produtos, ingredientes } = useStore();
+  const { produtos, ingredientes, materiais } = useStore();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -236,15 +240,27 @@ export default function ProdutosPage() {
           />
         </div>
       ) : view === "grid" ? (
-        <GridProdutos produtos={filtered} ingredientes={ingredientes} />
+        <GridProdutos
+          produtos={filtered}
+          ingredientes={ingredientes}
+          materiais={materiais}
+        />
       ) : (
         <>
           {/* No mobile a lista não existe — mostra sempre a grelha */}
           <div className="sm:hidden">
-            <GridProdutos produtos={filtered} ingredientes={ingredientes} />
+            <GridProdutos
+              produtos={filtered}
+              ingredientes={ingredientes}
+              materiais={materiais}
+            />
           </div>
           <div className="hidden sm:block">
-            <ListaProdutos produtos={filtered} ingredientes={ingredientes} />
+            <ListaProdutos
+              produtos={filtered}
+              ingredientes={ingredientes}
+              materiais={materiais}
+            />
           </div>
         </>
       )}

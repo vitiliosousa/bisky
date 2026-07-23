@@ -5,19 +5,34 @@ import { confirmDelete, toast } from "@/components/ui";
 import { formatQty } from "@/lib/cost";
 import { dataCurta } from "@/lib/format";
 import { useStore } from "@/lib/store";
-import type { Unidade } from "@/lib/types";
+import type { Perda, Unidade } from "@/lib/types";
 import {
   ArrowLeft,
   Package,
   Plus,
   Search,
   Trash2,
+  UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+function nomePerda(
+  p: Perda,
+  ingredientes: { id: string; nome: string }[],
+  produtos: { id: string; nome: string }[],
+) {
+  if (p.tipo === "produto") {
+    return produtos.find((x) => x.id === p.produtoId)?.nome ?? "Produto removido";
+  }
+  return (
+    ingredientes.find((x) => x.id === p.ingredienteId)?.nome ??
+    "Ingrediente removido"
+  );
+}
+
 export default function PerdasPage() {
-  const { ingredientes, perdas, removePerda } = useStore();
+  const { ingredientes, produtos, perdas, removePerda } = useStore();
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState(perdas[0]?.id ?? "");
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -27,19 +42,22 @@ export default function PerdasPage() {
     return [...perdas]
       .filter((p) => {
         if (!q) return true;
-        const ing = ingredientes.find((i) => i.id === p.ingredienteId);
-        return (
-          (ing?.nome.toLowerCase().includes(q) ?? false) ||
-          p.motivo.toLowerCase().includes(q)
-        );
+        const nome = nomePerda(p, ingredientes, produtos).toLowerCase();
+        return nome.includes(q) || p.motivo.toLowerCase().includes(q);
       })
       .sort((a, b) => b.data.localeCompare(a.data));
-  }, [perdas, ingredientes, busca]);
+  }, [perdas, ingredientes, produtos, busca]);
 
   const perda = perdas.find((p) => p.id === sel) ?? filtered[0];
-  const ing = perda
-    ? ingredientes.find((i) => i.id === perda.ingredienteId)
-    : undefined;
+  const ing =
+    perda?.tipo !== "produto" && perda?.ingredienteId
+      ? ingredientes.find((i) => i.id === perda.ingredienteId)
+      : undefined;
+  const prod =
+    perda?.tipo === "produto" && perda?.produtoId
+      ? produtos.find((p) => p.id === perda.produtoId)
+      : undefined;
+  const nome = perda ? nomePerda(perda, ingredientes, produtos) : "";
 
   function selectPerda(id: string) {
     setSel(id);
@@ -48,8 +66,7 @@ export default function PerdasPage() {
 
   async function apagar() {
     if (!perda) return;
-    const nome = ing?.nome ?? "esta perda";
-    if (!confirmDelete(nome)) return;
+    if (!confirmDelete(nome || "esta perda")) return;
     try {
       await removePerda(perda.id);
       setSel(perdas.find((p) => p.id !== perda.id)?.id ?? "");
@@ -93,17 +110,23 @@ export default function PerdasPage() {
         ) : (
           <ul>
             {filtered.map((p) => {
-              const i = ingredientes.find((x) => x.id === p.ingredienteId);
+              const n = nomePerda(p, ingredientes, produtos);
               const active = perda?.id === p.id;
+              const isProd = p.tipo === "produto";
+              const qtyLabel = isProd
+                ? `${p.quantidade} un`
+                : formatQty(
+                    p.quantidade,
+                    ingredientes.find((x) => x.id === p.ingredienteId)
+                      ?.unidade as Unidade,
+                  );
               return (
                 <li key={p.id}>
                   <button
                     type="button"
                     onClick={() => selectPerda(p.id)}
                     className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
-                      active
-                        ? "bg-strawberry-soft"
-                        : "hover:bg-[#f4f5f7]"
+                      active ? "bg-strawberry-soft" : "hover:bg-[#f4f5f7]"
                     }`}
                   >
                     <span
@@ -113,15 +136,23 @@ export default function PerdasPage() {
                           : "bg-strawberry-soft text-strawberry"
                       }`}
                     >
-                      <Trash2 className="size-4" strokeWidth={1.75} />
+                      {isProd ? (
+                        <UtensilsCrossed className="size-4" strokeWidth={1.75} />
+                      ) : (
+                        <Trash2 className="size-4" strokeWidth={1.75} />
+                      )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">
-                        {i?.nome ?? "Ingrediente removido"}
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-ink">
+                          {n}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-[#f4f5f7] px-2 py-0.5 text-[0.65rem] font-semibold text-muted">
+                          {isProd ? "Produto" : "Ingrediente"}
+                        </span>
                       </span>
                       <span className="block truncate text-xs text-muted">
-                        {formatQty(p.quantidade, i?.unidade as Unidade)} ·{" "}
-                        {p.motivo} · {dataCurta(p.data)}
+                        {qtyLabel} · {p.motivo} · {dataCurta(p.data)}
                       </span>
                     </span>
                   </button>
@@ -159,13 +190,18 @@ export default function PerdasPage() {
 
       <div className="card flex items-center gap-3">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-strawberry">
-          <Trash2 className="size-5" strokeWidth={1.75} />
+          {perda.tipo === "produto" ? (
+            <UtensilsCrossed className="size-5" strokeWidth={1.75} />
+          ) : (
+            <Trash2 className="size-5" strokeWidth={1.75} />
+          )}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-ink">
-            {ing?.nome ?? "Ingrediente removido"}
+          <p className="truncate text-lg font-semibold text-ink">{nome}</p>
+          <p className="text-xs text-muted">
+            {perda.tipo === "produto" ? "Produto" : "Ingrediente"} ·{" "}
+            {dataCurta(perda.data)}
           </p>
-          <p className="text-xs text-muted">{dataCurta(perda.data)}</p>
         </div>
       </div>
 
@@ -175,7 +211,9 @@ export default function PerdasPage() {
             Quantidade
           </p>
           <p className="mt-1 text-lg font-semibold tracking-tight text-strawberry sm:text-2xl">
-            {formatQty(perda.quantidade, ing?.unidade as Unidade)}
+            {perda.tipo === "produto"
+              ? `${perda.quantidade} un`
+              : formatQty(perda.quantidade, ing?.unidade as Unidade)}
           </p>
         </div>
         <div className="card">
@@ -183,7 +221,7 @@ export default function PerdasPage() {
             Unidade
           </p>
           <p className="mt-1 text-lg font-semibold tracking-tight text-ink sm:text-2xl">
-            {ing?.unidade ?? "—"}
+            {perda.tipo === "produto" ? "un" : (ing?.unidade ?? "—")}
           </p>
         </div>
       </div>
@@ -210,10 +248,30 @@ export default function PerdasPage() {
             </p>
           </div>
           <Link
-            href="/estoque"
+            href="/ingredientes"
             className="text-xs font-semibold text-strawberry hover:underline"
           >
-            Ver estoque
+            Ver ingredientes
+          </Link>
+        </div>
+      )}
+
+      {prod && (
+        <div className="card flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-blueberry-soft text-blueberry">
+            <UtensilsCrossed className="size-4.5" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink">{prod.nome}</p>
+            <p className="text-xs text-muted">
+              Baixa da receita e materiais deste produto
+            </p>
+          </div>
+          <Link
+            href={`/produtos/${prod.id}`}
+            className="text-xs font-semibold text-strawberry hover:underline"
+          >
+            Ver produto
           </Link>
         </div>
       )}

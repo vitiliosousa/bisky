@@ -1,10 +1,11 @@
 "use client";
 
-import { fetchMe, profileFromUser } from "@/lib/auth";
+import { clearAuth, fetchMe, profileFromUser } from "@/lib/auth";
 import type { PerfilUtilizador } from "@/lib/profile";
 import { useStore } from "@/lib/store";
 import {
   Building2,
+  LogOut,
   Mail,
   MapPin,
   Pencil,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 function initials(nome: string) {
   return nome
@@ -26,8 +28,14 @@ function initials(nome: string) {
 }
 
 export default function PerfilPage() {
+  const router = useRouter();
   const { pedidos, clientes, produtos } = useStore();
   const [perfil, setPerfil] = useState<PerfilUtilizador | null>(null);
+
+  function sair() {
+    clearAuth();
+    router.replace("/login");
+  }
 
   useEffect(() => {
     function refresh() {
@@ -62,16 +70,6 @@ export default function PerfilPage() {
 
   return (
     <div className="animate-in space-y-5">
-      <div className="flex items-center justify-end gap-2">
-        <Link
-          href="/perfil/editar"
-          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line sm:h-10 sm:gap-2 sm:px-4"
-        >
-          <Pencil className="size-4" strokeWidth={1.75} />
-          Editar perfil
-        </Link>
-      </div>
-
       <div className="card flex items-center gap-3 sm:items-start sm:gap-5">
         <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-strawberry text-sm font-bold text-white sm:size-20 sm:text-lg">
           {initials(perfil.nome)}

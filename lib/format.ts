@@ -27,7 +27,7 @@ export const labelsEstado: Record<EstadoPedido, string> = {
   pendente: "Pendente",
   em_producao: "Em produção",
   pronto: "Pronto",
-  entregue: "Entregue",
+  entregue: "Levado",
   cancelado: "Cancelado",
 };
 
@@ -38,4 +38,21 @@ export const labelsEvento: Record<TipoEvento, string> = {
   aniversario: "Aniversário",
 };
 
-export const HOJE = "2026-07-20";
+/** Data local de hoje no formato YYYY-MM-DD. */
+export function hoje(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Soma dias a uma data ISO (YYYY-MM-DD). */
+export function maisDias(iso: string, dias: number): string {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + dias);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

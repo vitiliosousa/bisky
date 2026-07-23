@@ -541,10 +541,10 @@ export const materiais: Material[] = [
 ];
 
 export const perdas: Perda[] = [
-  { id: "per1", ingredienteId: "i3", quantidade: 3,   motivo: "Ovos partidos",      data: "2026-07-18" },
-  { id: "per2", ingredienteId: "i2", quantidade: 0.2, motivo: "Calda que sobrou",   data: "2026-07-17" },
-  { id: "per3", ingredienteId: "i4", quantidade: 0.1, motivo: "Receita de teste",   data: "2026-07-15" },
-  { id: "per4", ingredienteId: "i1", quantidade: 0.5, motivo: "Erro de preparo",    data: "2026-07-12" },
+  { id: "per1", tipo: "ingrediente", ingredienteId: "i3", quantidade: 3,   motivo: "Ovos partidos",      data: "2026-07-18" },
+  { id: "per2", tipo: "ingrediente", ingredienteId: "i2", quantidade: 0.2, motivo: "Calda que sobrou",   data: "2026-07-17" },
+  { id: "per3", tipo: "ingrediente", ingredienteId: "i4", quantidade: 0.1, motivo: "Receita de teste",   data: "2026-07-15" },
+  { id: "per4", tipo: "ingrediente", ingredienteId: "i1", quantidade: 0.5, motivo: "Erro de preparo",    data: "2026-07-12" },
 ];
 
 /** Histórico fictício de gasto por cliente (além dos pedidos listados) */

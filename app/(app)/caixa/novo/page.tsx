@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { MovimentoForm, novoMovimentoDraft } from "@/components/MovimentoForm";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,8 @@ export default function NovoMovimentoPage() {
     <div className="animate-in space-y-5">
       <MovimentoForm
         initial={novoMovimentoDraft()}
-        onDone={() => router.push("/caixa")}
-        onCancel={() => router.push("/caixa")}
+        onDone={() => router.replace("/caixa")}
+        onCancel={() => router.replace("/caixa")}
       />
     </div>
   );

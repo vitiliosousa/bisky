@@ -18,13 +18,14 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-export default function EstoquePage() {
+export default function IngredientesPage() {
   const { ingredientes, upsertIngrediente, removeIngrediente } = useStore();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "falta">("todos");
   const [sel, setSel] = useState(ingredientes[0]?.id ?? "");
   const [mobileDetail, setMobileDetail] = useState(false);
   const [entradaQty, setEntradaQty] = useState("");
+  const [entradaPreco, setEntradaPreco] = useState("");
 
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
 
@@ -51,6 +52,7 @@ export default function EstoquePage() {
   function selectIng(id: string) {
     setSel(id);
     setEntradaQty("");
+    setEntradaPreco("");
     setMobileDetail(true);
   }
 
@@ -101,7 +103,7 @@ export default function EstoquePage() {
             </option>
           </select>
           <Link
-            href="/estoque/novo"
+            href="/ingredientes/novo"
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
           >
             <Plus className="size-4" strokeWidth={2.25} />
@@ -224,7 +226,7 @@ export default function EstoquePage() {
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Link
-              href={`/estoque/${ing.id}/editar`}
+              href={`/ingredientes/${ing.id}/editar`}
               className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
               aria-label="Editar"
             >
@@ -294,30 +296,54 @@ export default function EstoquePage() {
           </div>
         </div>
 
-        {/* ── Repor stock ──────────────────────────────────── */}
         <div className="card">
-          <p className="mb-2.5 text-sm font-semibold text-ink">Repor stock</p>
-          <div className="flex gap-2">
+          <div className="mb-2.5">
+            <p className="text-sm font-semibold text-ink">Registrar compra</p>
+            <p className="text-xs text-muted">
+              Adiciona ao stock e actualiza o custo unitário
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="number"
               min="0"
-              placeholder={`Quantidade em ${ing.unidade}`}
+              step="any"
+              placeholder={`Qtd. (${ing.unidade})`}
               value={entradaQty}
               onChange={(e) => setEntradaQty(e.target.value)}
+              className="field min-w-0 flex-1"
+            />
+            <input
+              type="number"
+              min="0"
+              placeholder="Preço do lote (MZN)"
+              value={entradaPreco}
+              onChange={(e) => setEntradaPreco(e.target.value)}
               className="field min-w-0 flex-1"
             />
             <button
               type="button"
               onClick={async () => {
                 const qty = Number(entradaQty);
-                if (!qty || qty <= 0) return;
+                const preco = Number(entradaPreco);
+                if (!qty || qty <= 0) {
+                  toast("Indique a quantidade comprada.", "error");
+                  return;
+                }
+                if (!preco || preco <= 0) {
+                  toast("Indique o preço do lote.", "error");
+                  return;
+                }
                 try {
                   await upsertIngrediente({
                     ...ing,
                     quantidadeAtual: ing.quantidadeAtual + qty,
+                    quantidadeCompra: qty,
+                    precoCompra: preco,
                   });
                   setEntradaQty("");
-                  toast(`+${qty} ${ing.unidade} adicionados.`, "success");
+                  setEntradaPreco("");
+                  toast(`Compra registada: +${qty} ${ing.unidade}.`, "success");
                 } catch (err) {
                   toast(
                     err instanceof Error ? err.message : "Erro ao actualizar.",
@@ -325,10 +351,10 @@ export default function EstoquePage() {
                   );
                 }
               }}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
             >
               <Check className="size-4" strokeWidth={2} />
-              Adicionar
+              Registrar
             </button>
           </div>
         </div>

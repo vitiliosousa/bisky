@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ProdutoForm, novoProdutoDraft } from "@/components/ProdutoForm";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,8 @@ export default function NovoProdutoPage() {
     <div className="animate-in space-y-5">
       <ProdutoForm
         initial={novoProdutoDraft()}
-        onDone={() => router.push("/produtos")}
-        onCancel={() => router.push("/produtos")}
+        onDone={() => router.replace("/produtos")}
+        onCancel={() => router.replace("/produtos")}
       />
     </div>
   );

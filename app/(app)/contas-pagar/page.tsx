@@ -2,7 +2,7 @@
 
 import { Empty } from "@/components/Empty";
 import { confirmDelete, toast } from "@/components/ui";
-import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { hoje, dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
   AlertTriangle,
@@ -26,8 +26,9 @@ export default function ContasPagarPage() {
   const [sel, setSel] = useState(contasPagar[0]?.id ?? "");
   const [mobileDetail, setMobileDetail] = useState(false);
 
+  const hojeISO = hoje();
   const abertas = contasPagar.filter((c) => !c.paga);
-  const atrasadas = abertas.filter((c) => c.vencimento < HOJE);
+  const atrasadas = abertas.filter((c) => c.vencimento < hojeISO);
   const totalAberto = abertas.reduce((s, c) => s + c.valor, 0);
 
   const filtered = useMemo(() => {
@@ -35,7 +36,7 @@ export default function ContasPagarPage() {
     return contasPagar
       .filter((c) => {
         if (filtro === "abertas" && c.paga) return false;
-        if (filtro === "atrasadas" && (c.paga || c.vencimento >= HOJE))
+        if (filtro === "atrasadas" && (c.paga || c.vencimento >= hojeISO))
           return false;
         if (filtro === "pagas" && !c.paga) return false;
         return (
@@ -45,13 +46,13 @@ export default function ContasPagarPage() {
         );
       })
       .sort((a, b) => {
-        const aAtrasada = !a.paga && a.vencimento < HOJE;
-        const bAtrasada = !b.paga && b.vencimento < HOJE;
+        const aAtrasada = !a.paga && a.vencimento < hojeISO;
+        const bAtrasada = !b.paga && b.vencimento < hojeISO;
         if (aAtrasada !== bAtrasada) return aAtrasada ? -1 : 1;
         if (a.paga !== b.paga) return a.paga ? 1 : -1;
         return a.vencimento.localeCompare(b.vencimento);
       });
-  }, [contasPagar, busca, filtro]);
+  }, [contasPagar, busca, filtro, hojeISO]);
 
   const conta = contasPagar.find((c) => c.id === sel) ?? filtered[0];
 
@@ -70,7 +71,7 @@ export default function ContasPagarPage() {
           ? `${conta.fornecedor} — ${conta.descricao}`
           : conta.fornecedor,
         valor: conta.valor,
-        data: HOJE,
+        data: hojeISO,
         categoria: "Fornecedores",
       });
       toast("Marcada como paga.", "success");
@@ -149,7 +150,7 @@ export default function ContasPagarPage() {
         <div className="card p-2!">
           <ul className="space-y-0.5">
             {filtered.map((c) => {
-              const atrasada = !c.paga && c.vencimento < HOJE;
+              const atrasada = !c.paga && c.vencimento < hojeISO;
               const isActive = conta?.id === c.id;
               return (
                 <li key={c.id}>
@@ -222,7 +223,7 @@ export default function ContasPagarPage() {
   );
 
   const detalhe = conta && (() => {
-    const atrasada = !conta.paga && conta.vencimento < HOJE;
+    const atrasada = !conta.paga && conta.vencimento < hojeISO;
 
     return (
       <div className="flex flex-col gap-5">

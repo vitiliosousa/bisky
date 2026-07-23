@@ -1,6 +1,6 @@
 "use client";
 
-import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { hoje, dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -27,10 +27,11 @@ function initials(nome: string) {
 
 export default function CalendarioPage() {
   const { pedidos, clientes, produtos } = useStore();
-  const hojeDate = new Date(HOJE + "T12:00:00");
+  const hojeISO = hoje();
+  const hojeDate = new Date(hojeISO + "T12:00:00");
   const [ano, setAno] = useState(hojeDate.getFullYear());
   const [mes, setMes] = useState(hojeDate.getMonth());
-  const [diaSel, setDiaSel] = useState(HOJE);
+  const [diaSel, setDiaSel] = useState(hojeISO);
 
   const total = daysInMonth(ano, mes);
   const offset = (() => {
@@ -69,9 +70,11 @@ export default function CalendarioPage() {
   }
 
   function irParaHoje() {
-    setAno(hojeDate.getFullYear());
-    setMes(hojeDate.getMonth());
-    setDiaSel(HOJE);
+    const h = hoje();
+    const d = new Date(h + "T12:00:00");
+    setAno(d.getFullYear());
+    setMes(d.getMonth());
+    setDiaSel(h);
   }
 
   const mesLabel = new Date(ano, mes, 1).toLocaleDateString("pt-MZ", {
@@ -135,7 +138,7 @@ export default function CalendarioPage() {
               const day = i + 1;
               const iso = isoDate(ano, mes, day);
               const list = porDia.get(iso) ?? [];
-              const isHoje = iso === HOJE;
+              const isHoje = iso === hojeISO;
               const ativo = iso === diaSel;
 
               return (

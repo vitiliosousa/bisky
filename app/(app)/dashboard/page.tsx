@@ -8,15 +8,21 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { hoje, dataCurta, mzn } from "@/lib/format";
 import { fetchMe } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import {
   AlertTriangle,
+  ArrowDownLeft,
   ArrowRight,
+  BarChart3,
+  Box,
+  Cake,
   Clock3,
   Package,
   ShoppingBag,
+  Trash2,
+  Users,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -90,10 +96,11 @@ export default function DashboardPage() {
       .catch(() => setUser(""));
   }, []);
 
-  const weekStart = startOfWeek(HOJE);
-  const weekEnd = endOfWeek(HOJE);
-  const hoje = pedidos
-    .filter((p) => p.dataEntrega === HOJE && p.estado !== "cancelado")
+  const hojeISO = hoje();
+  const weekStart = startOfWeek(hojeISO);
+  const weekEnd = endOfWeek(hojeISO);
+  const entregasHoje = pedidos
+    .filter((p) => p.dataEntrega === hojeISO && p.estado !== "cancelado")
     .sort((a, b) => a.hora.localeCompare(b.hora));
   const semana = pedidos.filter(
     (p) =>
@@ -101,7 +108,7 @@ export default function DashboardPage() {
       p.dataEntrega <= weekEnd &&
       p.estado !== "cancelado",
   );
-  const mes = HOJE.slice(0, 7);
+  const mes = hojeISO.slice(0, 7);
   const entradasMes = movimentos
     .filter((m) => m.tipo === "entrada" && m.data.startsWith(mes))
     .reduce((s, m) => s + m.valor, 0);
@@ -137,7 +144,7 @@ export default function DashboardPage() {
   })();
 
   const chartData = useMemo(() => {
-    const base = new Date(HOJE + "T12:00:00");
+    const base = new Date(hojeISO + "T12:00:00");
     const months: { key: string; mes: string; receita: number; lucro: number }[] =
       [];
 
@@ -169,9 +176,9 @@ export default function DashboardPage() {
           {saudacao()}, {user.split(" ")[0]}!
         </h1>
         <p className="mt-1 text-xs text-muted sm:text-sm">
-          {dataCurta(HOJE)} · Tens{" "}
-          <span className="font-semibold text-ink">{hoje.length}</span>{" "}
-          {hoje.length === 1 ? "entrega" : "entregas"} hoje
+          {dataCurta(hojeISO)} · Tens{" "}
+          <span className="font-semibold text-ink">{entregasHoje.length}</span>{" "}
+          {entregasHoje.length === 1 ? "entrega" : "entregas"} hoje
         </p>
       </div>
 
@@ -213,7 +220,7 @@ export default function DashboardPage() {
             {semana.length}
           </p>
           <p className="mt-1.5 text-[0.7rem] text-muted sm:mt-2 sm:text-xs">
-            {hoje.length} para entregar hoje
+            {entregasHoje.length} para entregar hoje
           </p>
         </div>
 
@@ -254,6 +261,36 @@ export default function DashboardPage() {
             {aPagar.length} em aberto
           </p>
         </Link>
+      </div>
+
+      {/* ── Atalhos (só mobile) ────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-2 lg:hidden">
+        {[
+          { href: "/clientes",     icon: Users,         label: "Clientes",       color: "bg-blueberry-soft text-blueberry" },
+          { href: "/produtos",     icon: Cake,          label: "Produtos",       color: "bg-strawberry-soft text-strawberry" },
+          { href: "/ingredientes", icon: Package,       label: "Ingredientes",   color: "bg-blueberry-soft text-blueberry" },
+          { href: "/materiais",    icon: Box,           label: "Materiais",      color: "bg-blueberry-soft text-blueberry" },
+          { href: "/perdas",       icon: Trash2,        label: "Perdas",         color: "bg-strawberry-soft text-strawberry" },
+          { href: "/caixa",        icon: Wallet,        label: "Caixa",          color: "bg-mint-soft text-mint" },
+          { href: "/contas-pagar", icon: ArrowDownLeft, label: "Contas",         color: "bg-caramel-soft text-caramel" },
+          { href: "/relatorios",   icon: BarChart3,     label: "Relatórios",     color: "bg-blueberry-soft text-blueberry" },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center gap-1.5 rounded-2xl p-2 text-center transition active:bg-[#f4f5f7]"
+            >
+              <span className={`flex size-12 items-center justify-center rounded-full ${item.color}`}>
+                <Icon className="size-5" strokeWidth={1.75} />
+              </span>
+              <span className="text-[0.65rem] font-semibold leading-tight text-ink">
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* ── Gráfico receita × lucro ────────────────────────── */}
@@ -401,7 +438,7 @@ export default function DashboardPage() {
             {falta.map((i) => (
               <li key={i.id}>
                 <Link
-                  href="/estoque"
+                  href="/ingredientes"
                   className="flex items-center gap-3 rounded-2xl bg-strawberry-soft/60 px-3 py-2.5 transition hover:bg-strawberry-soft sm:px-3.5 sm:py-3"
                 >
                   <AlertTriangle

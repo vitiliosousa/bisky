@@ -1,9 +1,9 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
-import { confirmDelete, toast } from "@/components/ui";
+import { confirmDelete, StatusBadge, toast } from "@/components/ui";
 import { consumoDoPedido, formatQty } from "@/lib/cost";
-import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { hoje, dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -48,6 +49,7 @@ function PedidosContent() {
   const [busca, setBusca] = useState("");
   const [consumoMsg, setConsumoMsg] = useState("");
   const [consumoLoading, setConsumoLoading] = useState(false);
+  const [entregaLoading, setEntregaLoading] = useState(false);
   const [pagamentoValor, setPagamentoValor] = useState("");
   const [filtroFalta, setFiltroFalta] = useState(
     searchParams.get("falta") === "1",
@@ -144,7 +146,7 @@ function PedidosContent() {
             {pedidosFiltrados.map((p) => {
               const c = clientes.find((x) => x.id === p.clienteId);
               const falta = p.valor - p.pago;
-              const isHoje = p.dataEntrega === HOJE;
+              const isHoje = p.dataEntrega === hoje();
               const isActive = pedido?.id === p.id;
               return (
                 <li key={p.id}>
@@ -163,18 +165,23 @@ function PedidosContent() {
                         className={`block truncate text-sm font-semibold ${
                           isActive
                             ? "text-strawberry"
-                            : "text-ink group-hover:text-strawberry"
+                            : p.estado === "entregue"
+                              ? "text-muted"
+                              : "text-ink group-hover:text-strawberry"
                         }`}
                       >
                         {c?.nome ?? "—"}
                       </span>
-                      <span className="block truncate text-xs text-muted">
-                        {p.itens
-                          .map((i) => {
-                            const pr = produtos.find((x) => x.id === i.produtoId);
-                            return `${i.quantidade}× ${pr?.nome ?? "?"}`;
-                          })
-                          .join(", ")}
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <StatusBadge estado={p.estado} />
+                        <span className="truncate text-xs text-muted">
+                          {p.itens
+                            .map((i) => {
+                              const pr = produtos.find((x) => x.id === i.produtoId);
+                              return `${i.quantidade}× ${pr?.nome ?? "?"}`;
+                            })
+                            .join(", ")}
+                        </span>
                       </span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">
@@ -221,9 +228,12 @@ function PedidosContent() {
           <p className="truncate text-lg font-semibold text-ink">
             {cliente?.nome ?? "—"}
           </p>
-          <p className="text-xs text-muted">
-            {dataCurta(pedido.dataEntrega)} · {pedido.hora}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <StatusBadge estado={pedido.estado} />
+            <p className="text-xs text-muted">
+              {dataCurta(pedido.dataEntrega)} · {pedido.hora}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Link
@@ -316,7 +326,7 @@ function PedidosContent() {
                     tipo: "entrada",
                     descricao: `Pagamento — ${cliente?.nome ?? "cliente"}`,
                     valor: val,
-                    data: HOJE,
+                    data: hoje(),
                     categoria: "Pedidos",
                   });
                   setPagamentoValor("");
@@ -400,10 +410,50 @@ function PedidosContent() {
           )}
 
           {pedido.estoqueConsumido ? (
-            <p className="flex items-center justify-center gap-1.5 rounded-full bg-mint-soft py-2 text-sm font-semibold text-mint">
-              <Check className="size-4" strokeWidth={2} />
-              Aplicado ao estoque e materiais
-            </p>
+            <div className="space-y-2">
+              <p className="flex items-center justify-center gap-1.5 rounded-full bg-mint-soft py-2 text-sm font-semibold text-mint">
+                <Check className="size-4" strokeWidth={2} />
+                Aplicado ao estoque e materiais
+              </p>
+              {pedido.estado === "entregue" ? (
+                <p className="flex items-center justify-center gap-1.5 rounded-full bg-[#f4f5f7] py-2 text-sm font-semibold text-muted">
+                  <Truck className="size-4" strokeWidth={1.75} />
+                  Pedido finalizado — cliente levou
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={entregaLoading}
+                  onClick={async () => {
+                    setEntregaLoading(true);
+                    try {
+                      await upsertPedido({
+                        ...pedido,
+                        estado: "entregue",
+                      });
+                      toast("Pedido finalizado: cliente levou.", "success");
+                    } catch (err) {
+                      toast(
+                        err instanceof Error
+                          ? err.message
+                          : "Erro ao finalizar.",
+                        "error",
+                      );
+                    } finally {
+                      setEntregaLoading(false);
+                    }
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-blueberry py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                >
+                  {entregaLoading ? (
+                    <Loader2 className="size-4 animate-spin" strokeWidth={2} />
+                  ) : (
+                    <Truck className="size-4" strokeWidth={1.75} />
+                  )}
+                  Cliente levou — finalizar
+                </button>
+              )}
+            </div>
           ) : (
             <>
               <button
@@ -414,6 +464,14 @@ function PedidosContent() {
                   try {
                     const result = await consumirPedido(pedido.id);
                     setConsumoMsg(result.msg);
+                    if (result.ok) {
+                      await upsertPedido({
+                        ...pedido,
+                        estoqueConsumido: true,
+                        estado:
+                          pedido.estado === "entregue" ? "entregue" : "pronto",
+                      });
+                    }
                   } finally {
                     setConsumoLoading(false);
                   }
