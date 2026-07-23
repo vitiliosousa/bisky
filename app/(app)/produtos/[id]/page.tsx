@@ -11,7 +11,6 @@ import {
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
-  ArrowLeft,
   Pencil,
   Trash2,
   UtensilsCrossed,
@@ -28,14 +27,7 @@ export default function ProdutoDetalhePage() {
 
   if (!produto) {
     return (
-      <div className="animate-in space-y-4">
-        <Link
-          href="/produtos"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Voltar aos produtos
-        </Link>
+      <div className="animate-in">
         <div className="card">
           <p className="px-4 py-10 text-center text-sm text-muted">
             Produto não encontrado.
@@ -63,34 +55,6 @@ export default function ProdutoDetalhePage() {
 
   return (
     <div className="animate-in space-y-5">
-      {/* ── Topo: voltar + ações ───────────────────────────── */}
-      <div className="flex items-center justify-between gap-2">
-        <Link
-          href="/produtos"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Produtos
-        </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href={`/produtos/${produto.id}/editar`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line sm:h-10 sm:gap-2 sm:px-4"
-          >
-            <Pencil className="size-4" strokeWidth={1.75} />
-            Editar
-          </Link>
-          <button
-            type="button"
-            onClick={apagar}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95 sm:h-10 sm:gap-2 sm:px-4"
-          >
-            <Trash2 className="size-4" strokeWidth={1.75} />
-            Apagar
-          </button>
-        </div>
-      </div>
-
       {/* ── Cabeçalho do produto ───────────────────────────── */}
       <div className="card flex items-center gap-3 sm:items-start sm:gap-5">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-strawberry sm:size-16">
@@ -111,6 +75,23 @@ export default function ProdutoDetalhePage() {
           <p className="mt-0.5 text-lg font-semibold tracking-tight text-ink sm:text-3xl">
             {mzn(produto.preco)}
           </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <Link
+            href={`/produtos/${produto.id}/editar`}
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+            aria-label="Editar"
+          >
+            <Pencil className="size-4" strokeWidth={1.75} />
+          </Link>
+          <button
+            type="button"
+            onClick={apagar}
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+            aria-label="Apagar"
+          >
+            <Trash2 className="size-4" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 

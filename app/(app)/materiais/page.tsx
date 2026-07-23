@@ -6,7 +6,6 @@ import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
   AlertTriangle,
-  ArrowLeft,
   Box,
   Check,
   Pencil,
@@ -147,34 +146,6 @@ export default function MateriaisPage() {
     const baixo = mat.quantidade < mat.estoqueMinimo;
     return (
       <div className="flex flex-col gap-5">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileDetail(false)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition hover:text-ink lg:hidden"
-          >
-            <ArrowLeft className="size-4" strokeWidth={1.75} />
-            Materiais
-          </button>
-          <div className="flex items-center gap-2 lg:ml-auto">
-            <Link
-              href={`/materiais/${mat.id}/editar`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line"
-            >
-              <Pencil className="size-4" strokeWidth={1.75} />
-              Editar
-            </Link>
-            <button
-              type="button"
-              onClick={apagar}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95"
-            >
-              <Trash2 className="size-4" strokeWidth={1.75} />
-              Apagar
-            </button>
-          </div>
-        </div>
-
         <div className="card flex items-center gap-3">
           <span className={`flex size-12 shrink-0 items-center justify-center rounded-full ${baixo ? "bg-strawberry-soft text-strawberry" : "bg-blueberry text-white"}`}>
             {baixo ? <AlertTriangle className="size-5" strokeWidth={1.75} /> : <Box className="size-5" strokeWidth={1.75} />}
@@ -183,6 +154,23 @@ export default function MateriaisPage() {
             {baixo && <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-strawberry">Abaixo do mínimo</p>}
             <p className="truncate text-lg font-semibold text-ink">{mat.nome}</p>
             <p className="text-xs text-muted">{mat.categoria}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Link
+              href={`/materiais/${mat.id}/editar`}
+              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+              aria-label="Editar"
+            >
+              <Pencil className="size-4" strokeWidth={1.75} />
+            </Link>
+            <button
+              type="button"
+              onClick={apagar}
+              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+              aria-label="Apagar"
+            >
+              <Trash2 className="size-4" strokeWidth={1.75} />
+            </button>
           </div>
         </div>
 

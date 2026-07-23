@@ -14,10 +14,12 @@ export function PerfilForm({
   onCancel: () => void;
 }) {
   const [edit, setEdit] = useState<PerfilUtilizador>(initial);
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
+    setLoading(true);
     try {
       await savePerfil({
         ...edit,
@@ -33,6 +35,8 @@ export function PerfilForm({
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -129,7 +133,7 @@ export function PerfilForm({
         </label>
       </div>
 
-      <FormActions onCancel={onCancel} submitLabel="Guardar alterações" />
+      <FormActions onCancel={onCancel} submitLabel="Guardar alterações" loading={loading} />
     </form>
   );
 }

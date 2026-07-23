@@ -25,8 +25,6 @@ export default function EstoquePage() {
   const [sel, setSel] = useState(ingredientes[0]?.id ?? "");
   const [mobileDetail, setMobileDetail] = useState(false);
   const [entradaQty, setEntradaQty] = useState("");
-  const [perdaQty, setPerdaQty] = useState("");
-  const [perdaMotivo, setPerdaMotivo] = useState("");
 
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
 
@@ -53,8 +51,6 @@ export default function EstoquePage() {
   function selectIng(id: string) {
     setSel(id);
     setEntradaQty("");
-    setPerdaQty("");
-    setPerdaMotivo("");
     setMobileDetail(true);
   }
 
@@ -193,35 +189,15 @@ export default function EstoquePage() {
 
     return (
       <div className="flex flex-col gap-5">
-        <div className="flex items-center justify-between gap-2">
+        <div className="card flex items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileDetail(false)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition hover:text-ink lg:hidden"
+            className="shrink-0 text-muted transition hover:text-ink lg:hidden"
+            aria-label="Voltar"
           >
             <ArrowLeft className="size-4" strokeWidth={1.75} />
-            Estoque
           </button>
-          <div className="flex items-center gap-2 lg:ml-auto">
-            <Link
-              href={`/estoque/${ing.id}/editar`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line"
-            >
-              <Pencil className="size-4" strokeWidth={1.75} />
-              Editar
-            </Link>
-            <button
-              type="button"
-              onClick={apagar}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95"
-            >
-              <Trash2 className="size-4" strokeWidth={1.75} />
-              Apagar
-            </button>
-          </div>
-        </div>
-
-        <div className="card flex items-center gap-3">
           <span
             className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
               baixo
@@ -245,6 +221,23 @@ export default function EstoquePage() {
             <p className="text-xs text-muted">
               {formatQty(ing.quantidadeAtual, ing.unidade)} em stock
             </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Link
+              href={`/estoque/${ing.id}/editar`}
+              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+              aria-label="Editar"
+            >
+              <Pencil className="size-4" strokeWidth={1.75} />
+            </Link>
+            <button
+              type="button"
+              onClick={apagar}
+              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+              aria-label="Apagar"
+            >
+              <Trash2 className="size-4" strokeWidth={1.75} />
+            </button>
           </div>
         </div>
 
@@ -338,54 +331,6 @@ export default function EstoquePage() {
               Adicionar
             </button>
           </div>
-        </div>
-
-        {/* ── Registar perda ───────────────────────────────── */}
-        <div className="card">
-          <div className="mb-2.5">
-            <p className="text-sm font-semibold text-ink">Registar perda</p>
-            <p className="text-xs text-muted">Ovos partidos, desperdício, testes de receita…</p>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min="0"
-              placeholder={`Quantidade em ${ing.unidade}`}
-              value={perdaQty}
-              onChange={(e) => setPerdaQty(e.target.value)}
-              className="field min-w-0 flex-1"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                const qty = Number(perdaQty);
-                if (!qty || qty <= 0) return;
-                try {
-                  const novaQty = Math.max(0, ing.quantidadeAtual - qty);
-                  await upsertIngrediente({ ...ing, quantidadeAtual: novaQty });
-                  setPerdaQty("");
-                  setPerdaMotivo("");
-                  toast(`−${qty} ${ing.unidade} registados como perda.`, "info");
-                } catch (err) {
-                  toast(
-                    err instanceof Error ? err.message : "Erro ao registar.",
-                    "error",
-                  );
-                }
-              }}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-strawberry-soft px-4 text-sm font-semibold text-strawberry transition hover:brightness-95"
-            >
-              <Trash2 className="size-4" strokeWidth={1.75} />
-              Registar
-            </button>
-          </div>
-          <input
-            type="text"
-            placeholder="Motivo (opcional)"
-            value={perdaMotivo}
-            onChange={(e) => setPerdaMotivo(e.target.value)}
-            className="field mt-2"
-          />
         </div>
       </div>
     );

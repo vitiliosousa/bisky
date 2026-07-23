@@ -29,7 +29,7 @@ export const NAV_MAIN: NavItem[] = [
   { href: "/produtos",   label: "Produtos",   subtitle: "Bolos, doces e encomendas",    icon: Cake           },
   { href: "/clientes",   label: "Clientes",   subtitle: "Quem compra mais",             icon: Users          },
   { href: "/pedidos",    label: "Pedidos",    subtitle: "Encomendas e entregas",        icon: ShoppingBag    },
-  { href: "/estoque",    label: "Estoque",    subtitle: "Ingredientes e quantidades",   icon: Package        },
+  { href: "/estoque",    label: "Ingredientes", subtitle: "Ingredientes e quantidades",   icon: Package        },
   { href: "/calendario", label: "Calendário", subtitle: "Entregas e prazos",            icon: CalendarDays   },
   { href: "/materiais",  label: "Materiais",  subtitle: "Caixas, fitas e outros",       icon: Box            },
   { href: "/perdas",     label: "Perdas",     subtitle: "Desperdícios e baixas",        icon: Trash2         },

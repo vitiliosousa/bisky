@@ -2,7 +2,6 @@
 
 import { toast } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -43,11 +42,6 @@ export default function NovoMaterialPage() {
 
   return (
     <div className="animate-in space-y-5">
-      <Link href="/materiais" className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink">
-        <ArrowLeft className="size-4" strokeWidth={1.75} />
-        Materiais
-      </Link>
-
       <form onSubmit={submeter} className="space-y-4">
         <div className="card space-y-4">
           <div>

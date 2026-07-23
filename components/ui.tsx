@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { Loader2 } from "lucide-react";
 
 /* ── Toast ──────────────────────────────────────────────── */
 type ToastType = "success" | "error" | "info";
@@ -161,6 +162,7 @@ export function Btn({
   type = "button",
   variant = "primary",
   disabled,
+  loading = false,
   className = "",
 }: {
   children: ReactNode;
@@ -168,6 +170,7 @@ export function Btn({
   type?: "button" | "submit";
   variant?: "primary" | "secondary" | "danger" | "ghost" | "mint";
   disabled?: boolean;
+  loading?: boolean;
   className?: string;
 }) {
   const styles = {
@@ -180,10 +183,11 @@ export function Btn({
   return (
     <button
       type={type}
-      disabled={disabled}
+      disabled={disabled || loading}
       onClick={onClick}
-      className={`inline-flex min-h-10 items-center justify-center rounded-full px-5 text-sm font-semibold transition disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition disabled:opacity-50 ${styles[variant]} ${className}`}
     >
+      {loading && <Loader2 className="size-4 animate-spin" strokeWidth={2} />}
       {children}
     </button>
   );
@@ -254,14 +258,16 @@ export function Modal({
 export function FormActions({
   onCancel,
   submitLabel = "Guardar",
+  loading = false,
 }: {
   onCancel: () => void;
   submitLabel?: string;
+  loading?: boolean;
 }) {
   return (
     <div className="mt-6 flex gap-2 sm:flex-row sm:justify-end">
-      <Btn variant="ghost" onClick={onCancel} className="w-full sm:w-auto">Cancelar</Btn>
-      <Btn type="submit" className="w-full sm:w-auto">{submitLabel}</Btn>
+      <Btn variant="ghost" onClick={onCancel} disabled={loading} className="w-full sm:w-auto">Cancelar</Btn>
+      <Btn type="submit" loading={loading} className="w-full sm:w-auto">{submitLabel}</Btn>
     </div>
   );
 }

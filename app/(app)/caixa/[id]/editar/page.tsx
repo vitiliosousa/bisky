@@ -2,8 +2,6 @@
 
 import { MovimentoForm } from "@/components/MovimentoForm";
 import { useStore } from "@/lib/store";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 export default function EditarMovimentoPage() {
@@ -15,14 +13,7 @@ export default function EditarMovimentoPage() {
 
   if (!movimento) {
     return (
-      <div className="animate-in space-y-4">
-        <Link
-          href="/caixa"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Fluxo de caixa
-        </Link>
+      <div className="animate-in">
         <div className="card">
           <p className="px-4 py-10 text-center text-sm text-muted">
             Movimento não encontrado.
@@ -36,14 +27,6 @@ export default function EditarMovimentoPage() {
 
   return (
     <div className="animate-in space-y-5">
-      <Link
-        href={voltar}
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-      >
-        <ArrowLeft className="size-4" strokeWidth={1.75} />
-        {movimento.descricao}
-      </Link>
-
       <MovimentoForm
         initial={{ ...movimento }}
         onDone={() => router.push(voltar)}

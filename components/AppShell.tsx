@@ -6,11 +6,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
-  Package,
+  CalendarDays,
   Menu,
   Plus,
 } from "lucide-react";
 import { Header } from "./Header";
+import { NavProgress } from "./NavProgress";
 import { NAV_ALL, Sidebar } from "./Sidebar";
 import { Toaster } from "./ui";
 import { clearAuth, fetchMe, isAuthenticated } from "@/lib/auth";
@@ -19,7 +20,7 @@ import { useStore } from "@/lib/store";
 const BOTTOM_NAV = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
-  { href: "/estoque", label: "Estoque", icon: Package },
+  { href: "/calendario", label: "Calendário", icon: CalendarDays },
   { href: "/mais", label: "Mais", icon: Menu },
 ];
 
@@ -28,7 +29,7 @@ const MAIS_PREFIXES = [
   "/mais",
   "/clientes",
   "/produtos",
-  "/calendario",
+  "/estoque",
   "/materiais",
   "/perdas",
   "/caixa",
@@ -37,6 +38,7 @@ const MAIS_PREFIXES = [
   "/perfil",
   "/negocio",
   "/financas",
+  "/notificacoes",
 ];
 
 function isTabActive(href: string, pathname: string) {
@@ -97,6 +99,9 @@ function getPageInfo(pathname: string) {
   if (pathname.startsWith("/contas-pagar/") && pathname.endsWith("/editar")) {
     return { title: "Editar conta", subtitle: "Atualize os dados da conta" };
   }
+  if (pathname === "/notificacoes") {
+    return { title: "Notificações", subtitle: "Alertas de estoque e contas" };
+  }
   if (pathname === "/negocio") {
     return { title: "Negócio", subtitle: "Clientes, produtos e operações" };
   }
@@ -105,6 +110,9 @@ function getPageInfo(pathname: string) {
   }
   if (pathname === "/mais") {
     return { title: "Mais", subtitle: "Todas as secções" };
+  }
+  if (pathname === "/perdas/novo") {
+    return { title: "Nova perda", subtitle: "Registe um desperdício ou baixa" };
   }
   if (pathname === "/perdas") {
     return { title: "Perdas", subtitle: "Desperdícios e baixas de stock" };
@@ -207,6 +215,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const page = getPageInfo(pathname);
+  const ROOT_TABS = ["/dashboard", "/pedidos", "/calendario", "/mais"];
+  const showBack = !ROOT_TABS.some(
+    (t) => pathname === t || pathname.startsWith(t + "/"),
+  );
 
   return (
     <div className="flex min-h-dvh bg-page">
@@ -219,11 +231,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           user={user}
           papel={papel}
           onSair={sair}
+          showBack={showBack}
+          showLogo={pathname === "/dashboard"}
         />
 
         <main className="flex-1 px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-8 lg:pb-8">
           {children}
         </main>
+        <NavProgress />
         <Toaster />
 
         {/* Bottom nav — só mobile */}

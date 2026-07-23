@@ -92,7 +92,9 @@ export default function LoginPage() {
                   <input
                     name="nome"
                     placeholder="O seu nome"
-                    className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
+                    autoCapitalize="words"
+                    autoCorrect="off"
+                    className="min-w-0 flex-1 bg-transparent text-sm font-normal normal-case text-ink outline-none placeholder:text-muted/50"
                   />
                 </span>
               </label>
@@ -107,8 +109,12 @@ export default function LoginPage() {
                   type="email"
                   required
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
                   placeholder="email@exemplo.com"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-normal normal-case text-ink outline-none placeholder:text-muted/50"
                 />
               </span>
             </label>
@@ -125,8 +131,11 @@ export default function LoginPage() {
                   autoComplete={
                     modo === "login" ? "current-password" : "new-password"
                   }
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="••••••••"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted/50"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-normal normal-case text-ink outline-none placeholder:text-muted/50"
                 />
                 <button
                   type="button"

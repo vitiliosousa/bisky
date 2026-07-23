@@ -31,10 +31,12 @@ export function IngredienteForm({
 }) {
   const { upsertIngrediente } = useStore();
   const [edit, setEdit] = useState<IngredienteDraft>(initial);
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
+    setLoading(true);
     try {
       await upsertIngrediente({
         ...edit,
@@ -47,6 +49,8 @@ export function IngredienteForm({
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -149,7 +153,7 @@ export function IngredienteForm({
         </div>
       </div>
 
-      <FormActions onCancel={onCancel} />
+      <FormActions onCancel={onCancel} loading={loading} />
     </form>
   );
 }

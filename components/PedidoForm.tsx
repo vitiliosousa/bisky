@@ -105,6 +105,8 @@ export function PedidoForm({
     setEdit({ ...edit, itens });
   }
 
+  const [loading, setLoading] = useState(false);
+
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.clienteId) {
@@ -116,6 +118,7 @@ export function PedidoForm({
       toast("Adicione pelo menos um produto.", "info");
       return;
     }
+    setLoading(true);
     try {
       await upsertPedido({
         ...edit,
@@ -131,6 +134,8 @@ export function PedidoForm({
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -508,7 +513,7 @@ export function PedidoForm({
         )}
       </div>
 
-      <FormActions onCancel={onCancel} />
+      <FormActions onCancel={onCancel} loading={loading} />
     </form>
   );
 }

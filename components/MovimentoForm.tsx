@@ -1,6 +1,7 @@
 "use client";
 
 import { toast, type FormSubmit } from "@/components/ui";
+import { Loader2 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { MovimentoCaixa } from "@/lib/types";
 import { useMemo, useState } from "react";
@@ -31,6 +32,7 @@ export function MovimentoForm({
 }) {
   const { movimentos, upsertMovimento } = useStore();
   const [edit, setEdit] = useState<MovimentoDraft>(initial);
+  const [loading, setLoading] = useState(false);
 
   const categorias = useMemo(() => {
     const base = edit.tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
@@ -44,15 +46,15 @@ export function MovimentoForm({
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.descricao.trim()) return;
+    setLoading(true);
     try {
-      await upsertMovimento({
-        ...edit,
-        valor: Number(edit.valor) || 0,
-      });
+      await upsertMovimento({ ...edit, valor: Number(edit.valor) || 0 });
       toast(edit.id ? "Movimento atualizado." : "Movimento registado.");
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -140,14 +142,17 @@ export function MovimentoForm({
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex h-10 items-center rounded-full bg-[#f4f5f7] px-5 text-sm font-semibold text-ink-soft transition hover:bg-line"
+          disabled={loading}
+          className="inline-flex h-10 items-center rounded-full bg-[#f4f5f7] px-5 text-sm font-semibold text-ink-soft transition hover:bg-line disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          className="inline-flex h-10 items-center rounded-full bg-strawberry px-5 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110"
+          disabled={loading}
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-strawberry px-5 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 disabled:opacity-60"
         >
+          {loading && <Loader2 className="size-4 animate-spin" strokeWidth={2} />}
           {edit.id ? "Guardar" : "Registar"}
         </button>
       </div>

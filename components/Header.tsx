@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Bell,
   ChevronDown,
   LogOut,
   UserRound,
-  AlertTriangle,
-  Wallet,
 } from "lucide-react";
-import { HOJE, dataCurta, mzn } from "@/lib/format";
+import { HOJE } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { BiskyLogo } from "./BiskyLogo";
 
 function initials(name: string) {
   return name
@@ -28,40 +29,37 @@ export function Header({
   user,
   papel,
   onSair,
+  showBack = false,
+  showLogo = false,
 }: {
   pageTitle: string;
   pageSubtitle?: string;
   user: string;
   papel: string;
   onSair: () => void;
+  showBack?: boolean;
+  /** No mobile, mostra o logo Bisky em vez do título (ex.: dashboard). */
+  showLogo?: boolean;
 }) {
+  const router = useRouter();
   const { ingredientes, contasPagar } = useStore();
   const [userOpen, setUserOpen] = useState(false);
-  const [notiOpen, setNotiOpen] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
-  const notiRef = useRef<HTMLDivElement>(null);
 
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
   const contasAtrasadas = contasPagar.filter(
     (c) => !c.paga && c.vencimento < HOJE,
   );
-  const contasProximas = contasPagar.filter(
-    (c) => !c.paga && c.vencimento >= HOJE,
-  );
   const alertCount = falta.length + contasAtrasadas.length;
 
   useEffect(() => {
-    if (!userOpen && !notiOpen) return;
+    if (!userOpen) return;
     function onClick(e: MouseEvent) {
       const t = e.target as Node;
       if (userRef.current && !userRef.current.contains(t)) setUserOpen(false);
-      if (notiRef.current && !notiRef.current.contains(t)) setNotiOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setUserOpen(false);
-        setNotiOpen(false);
-      }
+      if (e.key === "Escape") setUserOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -69,130 +67,64 @@ export function Header({
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [userOpen, notiOpen]);
+  }, [userOpen]);
 
   return (
     <header className="sticky top-0 z-20 bg-page">
-      <div className="flex h-(--header-h) items-center gap-3 px-4 sm:px-6 lg:px-8">
-        {/* Título — no mobile só o título; subtítulo só no desktop */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold leading-tight text-ink text-base sm:text-lg lg:text-xl">
-            {pageTitle}
-          </p>
-          {pageSubtitle && (
-            <p className="hidden truncate text-xs text-muted lg:block">
-              {pageSubtitle}
+      <div className="flex h-(--header-h) items-center gap-2.5 px-4 sm:gap-3 sm:px-6 lg:px-8">
+        {showBack && (
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="shrink-0 text-muted transition hover:text-ink lg:hidden"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="size-5" strokeWidth={1.75} />
+          </button>
+        )}
+
+        {/* Mobile: logo na dashboard; Desktop: sempre o título */}
+        {showLogo ? (
+          <>
+            <div className="min-w-0 flex-1 lg:hidden">
+              <BiskyLogo className="h-8" />
+            </div>
+            <div className="hidden min-w-0 flex-1 lg:block">
+              <p className="truncate font-semibold leading-tight text-ink text-xl">
+                {pageTitle}
+              </p>
+              {pageSubtitle && (
+                <p className="truncate text-xs text-muted">{pageSubtitle}</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold leading-tight text-ink text-base sm:text-lg lg:text-xl">
+              {pageTitle}
             </p>
-          )}
-        </div>
+            {pageSubtitle && (
+              <p className="hidden truncate text-xs text-muted lg:block">
+                {pageSubtitle}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex shrink-0 items-center gap-2">
           {/* Sino de notificações */}
-          <div className="relative" ref={notiRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setNotiOpen((v) => !v);
-                setUserOpen(false);
-              }}
-              className="relative flex size-10 items-center justify-center rounded-full bg-[#f4f5f7] text-muted transition hover:text-ink"
-              aria-label="Notificações"
-              aria-expanded={notiOpen}
-            >
-              <Bell className="size-4.5" strokeWidth={1.75} />
-              {alertCount > 0 && (
-                <span className="absolute right-2 top-2 flex size-4 items-center justify-center rounded-full bg-strawberry text-[0.6rem] font-bold text-white ring-2 ring-white">
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
-            </button>
-
-            {notiOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(100vw-2rem,20rem)] overflow-hidden rounded-2xl border border-line bg-white shadow-(--shadow-modal)">
-                <div className="border-b border-line px-4 py-3">
-                  <p className="text-sm font-semibold text-ink">Notificações</p>
-                  <p className="text-xs text-muted">
-                    {alertCount === 0
-                      ? "Tudo em ordem"
-                      : `${alertCount} alerta${alertCount === 1 ? "" : "s"}`}
-                  </p>
-                </div>
-                <ul className="max-h-72 overflow-y-auto py-1">
-                  {alertCount === 0 && (
-                    <li className="px-4 py-6 text-center text-sm text-muted">
-                      Sem alertas no momento.
-                    </li>
-                  )}
-                  {falta.map((i) => (
-                    <li key={i.id}>
-                      <Link
-                        href="/estoque"
-                        onClick={() => setNotiOpen(false)}
-                        className="flex gap-3 px-4 py-3 hover:bg-[#f4f5f7]"
-                      >
-                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-strawberry">
-                          <AlertTriangle className="size-4" strokeWidth={1.75} />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium text-ink">
-                            Falta {i.nome.toLowerCase()}
-                          </span>
-                          <span className="block text-xs text-muted">
-                            {i.quantidadeAtual} {i.unidade} · mín. {i.estoqueMinimo}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                  {contasAtrasadas.map((c) => (
-                    <li key={c.id}>
-                      <Link
-                        href="/contas-pagar"
-                        onClick={() => setNotiOpen(false)}
-                        className="flex gap-3 px-4 py-3 hover:bg-[#f4f5f7]"
-                      >
-                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-caramel-soft text-caramel">
-                          <Wallet className="size-4" strokeWidth={1.75} />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium text-ink">
-                            Conta atrasada
-                          </span>
-                          <span className="block text-xs text-muted">
-                            {c.fornecedor} · {mzn(c.valor)} · venceu{" "}
-                            {dataCurta(c.vencimento)}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                  {contasAtrasadas.length === 0 &&
-                    contasProximas.slice(0, 2).map((c) => (
-                      <li key={c.id}>
-                        <Link
-                          href="/contas-pagar"
-                          onClick={() => setNotiOpen(false)}
-                          className="flex gap-3 px-4 py-3 hover:bg-[#f4f5f7]"
-                        >
-                          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f5f7] text-muted">
-                            <Wallet className="size-4" strokeWidth={1.75} />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-sm font-medium text-ink">
-                              A vencer
-                            </span>
-                            <span className="block text-xs text-muted">
-                              {c.fornecedor} · {mzn(c.valor)} ·{" "}
-                              {dataCurta(c.vencimento)}
-                            </span>
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                </ul>
-              </div>
+          <Link
+            href="/notificacoes"
+            className="relative flex size-10 items-center justify-center rounded-full bg-[#f4f5f7] text-muted transition hover:text-ink"
+            aria-label="Notificações"
+          >
+            <Bell className="size-4.5" strokeWidth={1.75} />
+            {alertCount > 0 && (
+              <span className="absolute right-2 top-2 flex size-4 items-center justify-center rounded-full bg-strawberry text-[0.6rem] font-bold text-white ring-2 ring-white">
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
             )}
-          </div>
+          </Link>
 
           {/* User — no mobile só avatar; nome no sm+ */}
           <div className="relative" ref={userRef}>
@@ -200,7 +132,6 @@ export function Header({
               type="button"
               onClick={() => {
                 setUserOpen((v) => !v);
-                setNotiOpen(false);
               }}
               className="flex items-center gap-2.5 rounded-full bg-[#f4f5f7] py-1.5 h-10 pl-1.5 pr-1.5 transition hover:bg-[#eceef1] sm:pr-3"
               aria-expanded={userOpen}

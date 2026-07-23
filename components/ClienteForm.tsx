@@ -22,16 +22,20 @@ export function ClienteForm({
 }) {
   const { upsertCliente } = useStore();
   const [edit, setEdit] = useState<ClienteDraft>(initial);
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
+    setLoading(true);
     try {
       await upsertCliente(edit);
       toast(edit.id ? "Cliente atualizado." : "Cliente criado.");
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -74,7 +78,7 @@ export function ClienteForm({
           </label>
         </div>
       </div>
-      <FormActions onCancel={onCancel} />
+      <FormActions onCancel={onCancel} loading={loading} />
     </form>
   );
 }

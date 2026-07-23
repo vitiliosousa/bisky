@@ -113,9 +113,12 @@ export function ProdutoForm({
     setEdit({ ...edit, materiaisNecessarios: mats });
   }
 
+  const [loading, setLoading] = useState(false);
+
   async function onSubmit(e: FormSubmit) {
     e.preventDefault();
     if (!edit.nome.trim()) return;
+    setLoading(true);
     try {
       await upsertProduto({
         ...edit,
@@ -130,6 +133,8 @@ export function ProdutoForm({
       onDone();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -484,7 +489,7 @@ export function ProdutoForm({
         </div>
       )}
 
-      <FormActions onCancel={onCancel} />
+      <FormActions onCancel={onCancel} loading={loading} />
     </form>
   );
 }

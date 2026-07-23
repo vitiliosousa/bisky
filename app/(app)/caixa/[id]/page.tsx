@@ -5,7 +5,6 @@ import { dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
   ArrowDownLeft,
-  ArrowLeft,
   ArrowUpRight,
   Pencil,
   Trash2,
@@ -22,14 +21,7 @@ export default function MovimentoDetalhePage() {
 
   if (!movimento) {
     return (
-      <div className="animate-in space-y-4">
-        <Link
-          href="/caixa"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Voltar ao fluxo de caixa
-        </Link>
+      <div className="animate-in">
         <div className="card">
           <p className="px-4 py-10 text-center text-sm text-muted">
             Movimento não encontrado.
@@ -54,34 +46,6 @@ export default function MovimentoDetalhePage() {
 
   return (
     <div className="animate-in space-y-5">
-      {/* ── Topo ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2">
-        <Link
-          href="/caixa"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Fluxo de caixa
-        </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href={`/caixa/${movimento.id}/editar`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line sm:h-10 sm:gap-2 sm:px-4"
-          >
-            <Pencil className="size-4" strokeWidth={1.75} />
-            Editar
-          </Link>
-          <button
-            type="button"
-            onClick={apagar}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95 sm:h-10 sm:gap-2 sm:px-4"
-          >
-            <Trash2 className="size-4" strokeWidth={1.75} />
-            Apagar
-          </button>
-        </div>
-      </div>
-
       {/* ── Cabeçalho ──────────────────────────────────────── */}
       <div className="card flex items-center gap-3 sm:gap-5">
         <span
@@ -116,6 +80,23 @@ export default function MovimentoDetalhePage() {
             {isEntrada ? "+" : "−"}
             {mzn(movimento.valor)}
           </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <Link
+            href={`/caixa/${movimento.id}/editar`}
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+            aria-label="Editar"
+          >
+            <Pencil className="size-4" strokeWidth={1.75} />
+          </Link>
+          <button
+            type="button"
+            onClick={apagar}
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+            aria-label="Apagar"
+          >
+            <Trash2 className="size-4" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 

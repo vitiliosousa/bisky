@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Box,
   Check,
+  Loader2,
   Package,
   Pencil,
   Plus,
@@ -46,6 +47,7 @@ function PedidosContent() {
   const [mobileDetail, setMobileDetail] = useState(false);
   const [busca, setBusca] = useState("");
   const [consumoMsg, setConsumoMsg] = useState("");
+  const [consumoLoading, setConsumoLoading] = useState(false);
   const [pagamentoValor, setPagamentoValor] = useState("");
   const [filtroFalta, setFiltroFalta] = useState(
     searchParams.get("falta") === "1",
@@ -202,23 +204,34 @@ function PedidosContent() {
 
   const detalhe = pedido && (
     <div className="flex flex-col gap-5">
-      {/* ── Ações ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2">
+      {/* ── Cabeçalho ──────────────────────────────────────── */}
+      <div className="card flex items-center gap-3">
         <button
           type="button"
           onClick={() => setMobileDetail(false)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition hover:text-ink lg:hidden"
+          className="shrink-0 text-muted transition hover:text-ink lg:hidden"
+          aria-label="Voltar"
         >
           <ArrowLeft className="size-4" strokeWidth={1.75} />
-          Pedidos
         </button>
-        <div className="flex items-center gap-2 lg:ml-auto">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blueberry text-sm font-bold text-white">
+          {initials(cliente?.nome ?? "?")}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-semibold text-ink">
+            {cliente?.nome ?? "—"}
+          </p>
+          <p className="text-xs text-muted">
+            {dataCurta(pedido.dataEntrega)} · {pedido.hora}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
           <Link
             href={`/pedidos/${pedido.id}/editar`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#f4f5f7] px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line"
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+            aria-label="Editar"
           >
             <Pencil className="size-4" strokeWidth={1.75} />
-            Editar
           </Link>
           <button
             type="button"
@@ -237,26 +250,11 @@ function PedidosContent() {
                 toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
               }
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-strawberry-soft px-3.5 text-sm font-semibold text-strawberry transition hover:brightness-95"
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+            aria-label="Apagar"
           >
             <Trash2 className="size-4" strokeWidth={1.75} />
-            Apagar
           </button>
-        </div>
-      </div>
-
-      {/* ── Cabeçalho ──────────────────────────────────────── */}
-      <div className="card flex items-center gap-3">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blueberry text-sm font-bold text-white">
-          {initials(cliente?.nome ?? "?")}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-ink">
-            {cliente?.nome ?? "—"}
-          </p>
-          <p className="text-xs text-muted">
-            {dataCurta(pedido.dataEntrega)} · {pedido.hora}
-          </p>
         </div>
       </div>
 
@@ -410,12 +408,19 @@ function PedidosContent() {
             <>
               <button
                 type="button"
+                disabled={consumoLoading}
                 onClick={async () => {
-                  const result = await consumirPedido(pedido.id);
-                  setConsumoMsg(result.msg);
+                  setConsumoLoading(true);
+                  try {
+                    const result = await consumirPedido(pedido.id);
+                    setConsumoMsg(result.msg);
+                  } finally {
+                    setConsumoLoading(false);
+                  }
                 }}
-                className="w-full rounded-full bg-mint py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-mint py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
               >
+                {consumoLoading && <Loader2 className="size-4 animate-spin" strokeWidth={2} />}
                 Aplicar ao estoque e materiais
               </button>
               {consumoMsg && (
