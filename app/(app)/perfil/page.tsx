@@ -86,6 +86,23 @@ export default function PerfilPage() {
             </p>
           )}
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/perfil/editar"
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
+            aria-label="Editar"
+          >
+            <Pencil className="size-4" strokeWidth={1.75} />
+          </Link>
+          <button
+            type="button"
+            onClick={sair}
+            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+            aria-label="Sair"
+          >
+            <LogOut className="size-4" strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
