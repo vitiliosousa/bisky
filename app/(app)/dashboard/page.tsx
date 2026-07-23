@@ -112,6 +112,10 @@ export default function DashboardPage() {
   const entradasMes = movimentos
     .filter((m) => m.tipo === "entrada" && m.data.startsWith(mes))
     .reduce((s, m) => s + m.valor, 0);
+  const saidasMes = movimentos
+    .filter((m) => m.tipo === "saida" && m.data.startsWith(mes))
+    .reduce((s, m) => s + m.valor, 0);
+  const lucroMes = entradasMes - saidasMes;
   const aPagar = contasPagar.filter((c) => !c.paga);
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
   const aReceber = pedidos
@@ -243,22 +247,32 @@ export default function DashboardPage() {
         </Link>
 
         <Link
-          href="/contas-pagar"
-          className="card flex flex-col justify-between !p-3.5 transition hover:ring-2 hover:ring-caramel/40 sm:!p-5"
+          href="/caixa"
+          className="card flex flex-col justify-between !p-3.5 transition hover:ring-2 hover:ring-mint/40 sm:!p-5"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-muted sm:text-sm">
-              Contas a pagar
+              Lucro do mês
             </p>
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-caramel-soft text-caramel sm:size-10">
+            <span
+              className={`flex size-8 shrink-0 items-center justify-center rounded-full sm:size-10 ${
+                lucroMes >= 0
+                  ? "bg-mint-soft text-mint"
+                  : "bg-strawberry-soft text-strawberry"
+              }`}
+            >
               <Wallet className="size-4 sm:size-[1.125rem]" strokeWidth={1.75} />
             </span>
           </div>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-ink sm:mt-3 sm:text-3xl">
-            {mzn(aPagar.reduce((s, c) => s + c.valor, 0))}
+          <p
+            className={`mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl ${
+              lucroMes >= 0 ? "text-ink" : "text-strawberry"
+            }`}
+          >
+            {mzn(lucroMes)}
           </p>
-          <p className="mt-1.5 text-[0.7rem] text-muted sm:mt-2 sm:text-xs">
-            {aPagar.length} em aberto
+          <p className="mt-1.5 inline-flex items-center gap-1 text-[0.7rem] font-semibold text-mint sm:mt-2 sm:text-xs">
+            Ver caixa <ArrowRight className="size-3" />
           </p>
         </Link>
       </div>

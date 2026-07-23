@@ -493,6 +493,7 @@ export const contasPagar: ContaPagar[] = [
     valor: 4500,
     vencimento: "2026-07-25",
     paga: false,
+    recorrente: false,
   },
   {
     id: "cp2",
@@ -501,6 +502,7 @@ export const contasPagar: ContaPagar[] = [
     valor: 2800,
     vencimento: "2026-07-22",
     paga: false,
+    recorrente: false,
   },
   {
     id: "cp3",
@@ -509,6 +511,7 @@ export const contasPagar: ContaPagar[] = [
     valor: 2800,
     vencimento: "2026-07-28",
     paga: false,
+    recorrente: true,
   },
   {
     id: "cp4",
@@ -517,6 +520,7 @@ export const contasPagar: ContaPagar[] = [
     valor: 600,
     vencimento: "2026-07-12",
     paga: true,
+    recorrente: false,
   },
 ];
 

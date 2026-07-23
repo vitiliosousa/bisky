@@ -293,19 +293,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         valor: c.valor,
         vencimento: c.vencimento,
         paga: c.paga,
+        recorrente: Boolean(c.recorrente),
       };
       if (c.id) {
         const updated = await api<ContaPagar>(`/api/contas-pagar/${c.id}`, {
           method: "PUT",
           body: JSON.stringify(body),
         });
-        setContasPagar((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
+        setContasPagar((prev) =>
+          prev.map((x) =>
+            x.id === c.id ? { ...updated, recorrente: Boolean(updated.recorrente) } : x,
+          ),
+        );
       } else {
         const created = await api<ContaPagar>("/api/contas-pagar", {
           method: "POST",
           body: JSON.stringify(body),
         });
-        setContasPagar((prev) => [...prev, created]);
+        setContasPagar((prev) => [
+          ...prev,
+          { ...created, recorrente: Boolean(created.recorrente) },
+        ]);
       }
     },
     [],

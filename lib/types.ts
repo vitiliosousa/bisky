@@ -84,6 +84,8 @@ export interface ContaPagar {
   valor: number;
   vencimento: string;
   paga: boolean;
+  /** Se true, ao pagar cria a conta do mês seguinte. */
+  recorrente: boolean;
 }
 
 export interface EventoCalendario {

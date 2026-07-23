@@ -142,15 +142,17 @@ export function Panel({
 }
 
 export function StatusBadge({ estado }: { estado: EstadoPedido }) {
-  const map: Record<EstadoPedido, string> = {
-    pendente:    "bg-[var(--caramel-soft)] text-[var(--chocolate)]",
-    em_producao: "bg-[var(--blueberry-soft)] text-[var(--blueberry)]",
-    pronto:      "bg-[var(--mint-soft)] text-[var(--mint)]",
-    entregue:    "bg-[var(--line)] text-[var(--muted)]",
-    cancelado:   "bg-[var(--strawberry-soft)] text-[var(--strawberry)]",
-  };
+  const aberto =
+    estado === "pendente" ||
+    estado === "em_producao" ||
+    estado === "pronto";
+  const cls = aberto
+    ? "bg-[var(--caramel-soft)] text-[var(--chocolate)]"
+    : estado === "entregue"
+      ? "bg-[var(--line)] text-[var(--muted)]"
+      : "bg-[var(--strawberry-soft)] text-[var(--strawberry)]";
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${map[estado]}`}>
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
       {labelsEstado[estado]}
     </span>
   );
@@ -272,8 +274,91 @@ export function FormActions({
   );
 }
 
-export function confirmDelete(nome: string) {
-  return window.confirm(`Apagar "${nome}"? Esta ação não pode ser desfeita nesta sessão.`);
+function ConfirmDeleteDialog({
+  nome,
+  onConfirm,
+  onCancel,
+}: {
+  nome: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onCancel]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-6"
+      style={{ zIndex: 300, animation: "fade-in 0.15s ease-out both" }}
+      onClick={onCancel}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-hidden />
+      <div
+        role="alertdialog"
+        aria-modal
+        aria-labelledby="confirm-title"
+        className="relative w-full max-w-xs rounded-2xl bg-white p-5"
+        style={{ boxShadow: "var(--shadow-modal)", animation: "slide-up 0.2s ease-out both" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p id="confirm-title" className="text-sm font-semibold text-ink">
+          Apagar &ldquo;{nome}&rdquo;?
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          Esta ação não pode ser desfeita.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-full py-2 text-sm font-semibold text-muted ring-1 ring-line transition hover:bg-line"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-full bg-strawberry py-2 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            Apagar
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export function useConfirmDelete() {
+  const [state, setState] = useState<{ nome: string; resolve: (ok: boolean) => void } | null>(null);
+
+  function confirm(nome: string) {
+    return new Promise<boolean>((resolve) => {
+      setState({ nome, resolve });
+    });
+  }
+
+  const dialog = state ? (
+    <ConfirmDeleteDialog
+      nome={state.nome}
+      onConfirm={() => { state.resolve(true); setState(null); }}
+      onCancel={() => { state.resolve(false); setState(null); }}
+    />
+  ) : null;
+
+  return { confirm, dialog };
 }
 
 export type FormSubmit = FormEvent<HTMLFormElement>;

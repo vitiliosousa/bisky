@@ -28,6 +28,28 @@ function isTabActive(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+function getBackHref(pathname: string): string | undefined {
+  const ROOT_TABS = ["/dashboard", "/pedidos", "/calendario", "/perfil"];
+  if (ROOT_TABS.includes(pathname)) return undefined;
+
+  const parts = pathname.split("/").filter(Boolean);
+
+  if (parts.length >= 3 && parts[parts.length - 1] === "editar") {
+    return `/${parts.slice(0, -1).join("/")}`;
+  }
+  if (parts.length === 2 && parts[1] === "novo") {
+    return `/${parts[0]}`;
+  }
+  if (parts.length === 2) {
+    return `/${parts[0]}`;
+  }
+  if (pathname === "/perfil/editar") return "/perfil";
+  if (pathname === "/negocio" || pathname === "/financas") return "/dashboard";
+  if (pathname === "/notificacoes") return "/dashboard";
+  if (parts.length === 1) return "/dashboard";
+  return "/dashboard";
+}
+
 function getPageInfo(pathname: string) {
   if (pathname === "/produtos/novo") {
     return { title: "Novo produto", subtitle: "Cadastre um produto e a sua receita" };
@@ -62,6 +84,9 @@ function getPageInfo(pathname: string) {
   if (pathname.startsWith("/pedidos/") && pathname.endsWith("/editar")) {
     return { title: "Editar pedido", subtitle: "Atualize os dados do pedido" };
   }
+  if (pathname.startsWith("/pedidos/") && pathname !== "/pedidos") {
+    return { title: "Detalhe do pedido", subtitle: "Pagamento, consumo e entrega" };
+  }
   if (pathname === "/calendario/novo") {
     return { title: "Novo evento", subtitle: "Agende uma entrega ou festa" };
   }
@@ -77,6 +102,9 @@ function getPageInfo(pathname: string) {
   if (pathname.startsWith("/contas-pagar/") && pathname.endsWith("/editar")) {
     return { title: "Editar conta", subtitle: "Atualize os dados da conta" };
   }
+  if (pathname.startsWith("/contas-pagar/") && pathname !== "/contas-pagar") {
+    return { title: "Detalhe da conta", subtitle: "Valor, vencimento e pagamento" };
+  }
   if (pathname === "/notificacoes") {
     return { title: "Notificações", subtitle: "Alertas de estoque e contas" };
   }
@@ -88,6 +116,9 @@ function getPageInfo(pathname: string) {
   }
 if (pathname === "/perdas/novo") {
     return { title: "Nova perda", subtitle: "Registe um desperdício ou baixa" };
+  }
+  if (pathname.startsWith("/perdas/") && pathname !== "/perdas") {
+    return { title: "Detalhe da perda", subtitle: "Quantidade, motivo e stock" };
   }
   if (pathname === "/perdas") {
     return { title: "Perdas", subtitle: "Desperdícios e baixas de stock" };
@@ -101,11 +132,17 @@ if (pathname === "/perdas/novo") {
   if (pathname.includes("/materiais/") && pathname.endsWith("/editar")) {
     return { title: "Editar material", subtitle: "Actualize os dados" };
   }
+  if (pathname.startsWith("/materiais/") && pathname !== "/materiais") {
+    return { title: "Detalhe do material", subtitle: "Stock e custo" };
+  }
   if (pathname === "/ingredientes/novo") {
     return { title: "Novo ingrediente", subtitle: "Cadastre no estoque" };
   }
   if (pathname.startsWith("/ingredientes/") && pathname.endsWith("/editar")) {
     return { title: "Editar ingrediente", subtitle: "Atualize quantidade e custos" };
+  }
+  if (pathname.startsWith("/ingredientes/") && pathname !== "/ingredientes") {
+    return { title: "Detalhe do ingrediente", subtitle: "Stock, custo e compras" };
   }
   if (pathname === "/ingredientes") {
     return { title: "Ingredientes", subtitle: "Ingredientes e quantidades" };
@@ -125,6 +162,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { loading: storeLoading } = useStore();
   const [ready, setReady] = useState(false);
+  const [user, setUser] = useState("");
+  const [papel, setPapel] = useState("Confeiteira");
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -134,7 +173,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     async function checkAuth() {
       try {
-        await fetchMe();
+        const me = await fetchMe();
+        setUser(me.profile?.nome ?? me.email);
+        setPapel(me.profile?.papel ?? "Confeiteira");
         setReady(true);
       } catch {
         clearAuth();
@@ -142,12 +183,30 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
     }
 
+    function refreshUser() {
+      fetchMe()
+        .then((me) => {
+          setUser(me.profile?.nome ?? me.email);
+          setPapel(me.profile?.papel ?? "Confeiteira");
+        })
+        .catch(() => undefined);
+    }
+
     checkAuth();
+    window.addEventListener("bisky:profile-updated", refreshUser);
     window.addEventListener("bisky:unauthorized", () => {
       clearAuth();
       router.replace("/login");
     });
+    return () => {
+      window.removeEventListener("bisky:profile-updated", refreshUser);
+    };
   }, [router]);
+
+  function sair() {
+    clearAuth();
+    router.replace("/login");
+  }
 
   if (!ready || storeLoading) {
     return (
@@ -172,9 +231,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const page = getPageInfo(pathname);
   const ROOT_TABS = ["/dashboard", "/pedidos", "/calendario", "/perfil"];
-  const showBack = !ROOT_TABS.some(
-    (t) => pathname === t || pathname.startsWith(t + "/"),
-  );
+  const showBack = !ROOT_TABS.includes(pathname);
+  const backHref = getBackHref(pathname);
 
   return (
     <div className="flex min-h-dvh bg-page">
@@ -185,7 +243,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           pageTitle={page.title}
           pageSubtitle={page.subtitle}
           showBack={showBack}
+          backHref={backHref}
           showLogo={pathname === "/dashboard"}
+          user={user}
+          papel={papel}
+          onSair={sair}
         />
 
         <main className="flex-1 px-4 py-5 pb-24 sm:px-6 sm:py-6 lg:px-8 lg:pb-8">

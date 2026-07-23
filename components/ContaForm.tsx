@@ -10,7 +10,14 @@ import { useState } from "react";
 export type ContaDraft = Omit<ContaPagar, "id"> & { id?: string };
 
 export function novaContaDraft(): ContaDraft {
-  return { fornecedor: "", descricao: "", valor: 0, vencimento: hoje(), paga: false };
+  return {
+    fornecedor: "",
+    descricao: "",
+    valor: 0,
+    vencimento: hoje(),
+    paga: false,
+    recorrente: false,
+  };
 }
 
 export function ContaForm({
@@ -98,6 +105,22 @@ export function ContaForm({
               className="size-4 accent-mint"
             />
             Já está paga
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm font-medium text-ink sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={Boolean(edit.recorrente)}
+              onChange={(e) =>
+                setEdit({ ...edit, recorrente: e.target.checked })
+              }
+              className="mt-0.5 size-4 accent-strawberry"
+            />
+            <span>
+              Conta recorrente
+              <span className="mt-0.5 block text-xs font-normal text-muted">
+                Ao pagar, cria automaticamente a do mês seguinte
+              </span>
+            </span>
           </label>
         </div>
       </div>

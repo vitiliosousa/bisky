@@ -1,25 +1,24 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
-import { confirmDelete, StatusBadge, toast } from "@/components/ui";
-import { consumoDoPedido, formatQty } from "@/lib/cost";
-import { hoje, dataCurta, mzn } from "@/lib/format";
+import { Pagination } from "@/components/Pagination";
+import { StatusBadge } from "@/components/ui";
+import { dataCurta, hoje, mzn, pedidoAberto } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import type { EstadoPedido } from "@/lib/types";
+import { usePagination } from "@/lib/usePagination";
 import {
-  ArrowLeft,
-  Box,
-  Check,
-  Loader2,
-  Package,
-  Pencil,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
   Plus,
   Search,
-  Trash2,
-  Truck,
+  ShoppingBag,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 function initials(nome: string) {
   return nome
@@ -30,78 +29,100 @@ function initials(nome: string) {
     .join("");
 }
 
+type Filtro = "todos" | "hoje" | "a_receber" | "abertos" | "levados";
+
 function PedidosContent() {
   const searchParams = useSearchParams();
-  const {
-    pedidos,
-    clientes,
-    produtos,
-    ingredientes,
-    materiais,
-    upsertPedido,
-    upsertMovimento,
-    consumirPedido,
-    removePedido,
-  } = useStore();
-
-  const [sel, setSel] = useState(pedidos[0]?.id ?? "");
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const { pedidos, clientes, produtos } = useStore();
   const [busca, setBusca] = useState("");
-  const [consumoMsg, setConsumoMsg] = useState("");
-  const [consumoLoading, setConsumoLoading] = useState(false);
-  const [entregaLoading, setEntregaLoading] = useState(false);
-  const [pagamentoValor, setPagamentoValor] = useState("");
-  const [filtroFalta, setFiltroFalta] = useState(
-    searchParams.get("falta") === "1",
+  const [filtro, setFiltro] = useState<Filtro>(
+    searchParams.get("falta") === "1" ? "a_receber" : "todos",
   );
 
-  const pedidosFiltrados = [...pedidos]
-    .filter((p) => {
-      if (p.estado === "cancelado") return false;
-      if (filtroFalta && p.valor - p.pago <= 0) return false;
-      const cliente = clientes.find((c) => c.id === p.clienteId);
-      return !busca || cliente?.nome.toLowerCase().includes(busca.toLowerCase());
-    })
-    .sort((a, b) => a.dataEntrega.localeCompare(b.dataEntrega));
+  const hojeISO = hoje();
+  const activos = pedidos.filter((p) => pedidoAberto(p.estado));
+  const aReceber = pedidos
+    .filter((p) => p.estado !== "cancelado" && p.pago < p.valor)
+    .reduce((s, p) => s + (p.valor - p.pago), 0);
+  const entregasHoje = pedidos.filter(
+    (p) => pedidoAberto(p.estado) && p.dataEntrega === hojeISO,
+  ).length;
 
-  const pedido =
-    pedidos.find((p) => p.id === sel && p.estado !== "cancelado") ??
-    pedidosFiltrados[0];
-  const cliente = clientes.find((c) => c.id === pedido?.clienteId);
-  const consumo = pedido ? consumoDoPedido(pedido, produtos, ingredientes) : [];
+  const filtered = useMemo(() => {
+    const q = busca.toLowerCase().trim();
+    return [...pedidos]
+      .filter((p) => {
+        if (p.estado === "cancelado") return false;
+        if (filtro === "hoje" && p.dataEntrega !== hojeISO) return false;
+        if (filtro === "a_receber" && p.valor - p.pago <= 0) return false;
+        if (filtro === "abertos" && !pedidoAberto(p.estado)) return false;
+        if (filtro === "levados" && p.estado !== "entregue") return false;
+        const cliente = clientes.find((c) => c.id === p.clienteId);
+        return !q || (cliente?.nome.toLowerCase().includes(q) ?? false);
+      })
+      .sort((a, b) => {
+        const aEntregue = a.estado === "entregue";
+        const bEntregue = b.estado === "entregue";
+        if (aEntregue !== bEntregue) return aEntregue ? 1 : -1;
+        if (a.dataEntrega !== b.dataEntrega) {
+          return a.dataEntrega.localeCompare(b.dataEntrega);
+        }
+        return (a.hora ?? "").localeCompare(b.hora ?? "");
+      });
+  }, [pedidos, clientes, busca, filtro, hojeISO]);
 
-  const consumoMateriais = pedido
-    ? Object.values(
-        pedido.itens.reduce<Record<string, { materialId: string; nome: string; quantidade: number; unidade: string }>>((acc, item) => {
-          const prod = produtos.find((p) => p.id === item.produtoId);
-          for (const m of prod?.materiaisNecessarios ?? []) {
-            const mat = materiais.find((x) => x.id === m.materialId);
-            if (!mat) continue;
-            if (acc[m.materialId]) {
-              acc[m.materialId].quantidade += m.quantidade * item.quantidade;
-            } else {
-              acc[m.materialId] = {
-                materialId: m.materialId,
-                nome: mat.nome,
-                quantidade: m.quantidade * item.quantidade,
-                unidade: mat.unidade,
-              };
-            }
-          }
-          return acc;
-        }, {}),
-      )
-    : [];
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
 
-  function selectPedido(id: string) {
-    setSel(id);
-    setConsumoMsg("");
-    setPagamentoValor("");
-    setMobileDetail(true);
-  }
+  return (
+    <div className="animate-in space-y-4">
+      {/* ── KPIs ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <div className="card flex flex-col justify-between !p-3.5 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">Activos</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blueberry-soft text-blueberry sm:size-10">
+              <ShoppingBag
+                className="size-4 sm:size-[1.125rem]"
+                strokeWidth={1.75}
+              />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-ink sm:mt-3 sm:text-3xl">
+            {activos.length}
+          </p>
+        </div>
+        <div className="card flex flex-col justify-between !p-3.5 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">A receber</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-strawberry sm:size-10">
+              <Wallet className="size-4 sm:size-[1.125rem]" strokeWidth={1.75} />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-strawberry sm:mt-3 sm:text-3xl">
+            {mzn(aReceber)}
+          </p>
+        </div>
+        <div className="card col-span-2 flex flex-col justify-between !p-3.5 sm:col-span-1 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">Hoje</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-caramel-soft text-caramel sm:size-10">
+              <CalendarDays
+                className="size-4 sm:size-[1.125rem]"
+                strokeWidth={1.75}
+              />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-caramel sm:mt-3 sm:text-3xl">
+            {entregasHoje}
+          </p>
+          <p className="mt-1 text-[0.7rem] text-muted sm:text-xs">
+            {entregasHoje === 1 ? "entrega" : "entregas"}
+          </p>
+        </div>
+      </div>
 
-  const lista = (
-    <div className="flex flex-col gap-3">
+      {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label
           className="search-pill w-full min-w-0 sm:flex-1"
@@ -115,400 +136,133 @@ function PedidosContent() {
             onChange={(e) => setBusca(e.target.value)}
           />
         </label>
-        <button
-          type="button"
-          onClick={() => setFiltroFalta(!filtroFalta)}
-          className={`inline-flex h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition ${
-            filtroFalta
-              ? "bg-strawberry text-white shadow-sm shadow-strawberry/30"
-              : "bg-[#f4f5f7] text-ink-soft hover:bg-line"
-          }`}
-        >
-          A receber
-        </button>
-        <Link
-          href="/pedidos/novo"
-          className="inline-flex h-10 shrink-0 items-center gap-2 self-end rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:self-auto sm:px-5"
-        >
-          <Plus className="size-4" strokeWidth={2.25} />
-          <span className="hidden sm:inline">Novo pedido</span>
-          <span className="sm:hidden">Novo</span>
-        </Link>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value as Filtro)}
+            className="h-10 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-[#f4f5f7] pl-4 pr-9 text-sm font-medium text-ink-soft outline-none transition focus:ring-2 focus:ring-strawberry-soft sm:flex-none"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2378716c' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 1rem center",
+            }}
+            aria-label="Filtrar pedidos"
+          >
+            <option value="todos">Todos</option>
+            <option value="hoje">Hoje</option>
+            <option value="a_receber">A receber</option>
+            <option value="abertos">Abertos</option>
+            <option value="levados">Levados</option>
+          </select>
+
+          <Link
+            href="/pedidos/novo"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
+          >
+            <Plus className="size-4" strokeWidth={2.25} />
+            <span className="hidden sm:inline">Novo pedido</span>
+            <span className="sm:hidden">Novo</span>
+          </Link>
+        </div>
       </div>
 
-      {pedidosFiltrados.length === 0 ? (
+      {/* ── Lista ───────────────────────────────────────────── */}
+      {filtered.length === 0 ? (
         <div className="card">
-          <Empty message="Nenhum pedido encontrado." />
+          <Empty
+            message={
+              busca || filtro !== "todos"
+                ? "Nenhum pedido encontrado."
+                : "Sem pedidos ainda."
+            }
+            hint={
+              busca || filtro !== "todos"
+                ? undefined
+                : "Crie o seu primeiro pedido."
+            }
+          />
         </div>
       ) : (
-        <div className="card p-2!">
-          <ul className="space-y-0.5">
-            {pedidosFiltrados.map((p) => {
-              const c = clientes.find((x) => x.id === p.clienteId);
-              const falta = p.valor - p.pago;
-              const isHoje = p.dataEntrega === hoje();
-              const isActive = pedido?.id === p.id;
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectPedido(p.id)}
-                    className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-left transition ${
-                      isActive ? "bg-strawberry-soft" : "hover:bg-[#f8f8f9]"
-                    }`}
-                  >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blueberry text-xs font-bold text-white">
-                      {initials(c?.nome ?? "?")}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={`block truncate text-sm font-semibold ${
-                          isActive
-                            ? "text-strawberry"
-                            : p.estado === "entregue"
+        <>
+          <div className="card p-2!">
+            <ul className="divide-y divide-line">
+              {pageItems.map((p) => {
+                const c = clientes.find((x) => x.id === p.clienteId);
+                const falta = p.valor - p.pago;
+                const isHoje = p.dataEntrega === hojeISO;
+                return (
+                  <li key={p.id}>
+                    <Link
+                      href={`/pedidos/${p.id}`}
+                      className="group flex items-center gap-3 px-3 py-3.5 sm:gap-4"
+                    >
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blueberry text-xs font-bold text-white sm:size-11">
+                        {initials(c?.nome ?? "?")}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block truncate text-sm font-semibold ${
+                            p.estado === "entregue"
                               ? "text-muted"
                               : "text-ink group-hover:text-strawberry"
-                        }`}
-                      >
-                        {c?.nome ?? "—"}
-                      </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        <StatusBadge estado={p.estado} />
-                        <span className="truncate text-xs text-muted">
-                          {p.itens
-                            .map((i) => {
-                              const pr = produtos.find((x) => x.id === i.produtoId);
-                              return `${i.quantidade}× ${pr?.nome ?? "?"}`;
-                            })
-                            .join(", ")}
+                          }`}
+                        >
+                          {c?.nome ?? "—"}
+                        </span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                          <StatusBadge estado={p.estado as EstadoPedido} />
+                          <span className="truncate text-xs text-muted">
+                            {dataCurta(p.dataEntrega)}
+                            {p.hora ? ` · ${p.hora}` : ""}
+                            {" · "}
+                            {p.itens
+                              .map((i) => {
+                                const pr = produtos.find(
+                                  (x) => x.id === i.produtoId,
+                                );
+                                return `${i.quantidade}× ${pr?.nome ?? "?"}`;
+                              })
+                              .join(", ")}
+                          </span>
                         </span>
                       </span>
-                    </span>
-                    <span className="flex shrink-0 flex-col items-end gap-1">
-                      {isHoje && (
-                        <span className="rounded-full bg-caramel-soft px-2 py-0.5 text-[0.65rem] font-bold text-caramel">
-                          Hoje
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        {isHoje && pedidoAberto(p.estado) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-caramel-soft px-2 py-0.5 text-[0.65rem] font-bold text-caramel">
+                            <Clock3 className="size-3" strokeWidth={2} />
+                            Hoje
+                          </span>
+                        )}
+                        <span className="text-sm font-semibold text-ink">
+                          {mzn(p.valor)}
                         </span>
-                      )}
-                      <span className="text-xs font-semibold text-ink">
-                        {mzn(p.valor)}
+                        {falta > 0 && (
+                          <span className="text-[0.65rem] font-semibold text-strawberry">
+                            falta {mzn(falta)}
+                          </span>
+                        )}
                       </span>
-                      {falta > 0 && (
-                        <span className="text-[0.65rem] font-semibold text-strawberry">
-                          falta {mzn(falta)}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-
-  const detalhe = pedido && (
-    <div className="flex flex-col gap-5">
-      {/* ── Cabeçalho ──────────────────────────────────────── */}
-      <div className="card flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setMobileDetail(false)}
-          className="shrink-0 text-muted transition hover:text-ink lg:hidden"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-        </button>
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blueberry text-sm font-bold text-white">
-          {initials(cliente?.nome ?? "?")}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-semibold text-ink">
-            {cliente?.nome ?? "—"}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <StatusBadge estado={pedido.estado} />
-            <p className="text-xs text-muted">
-              {dataCurta(pedido.dataEntrega)} · {pedido.hora}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Link
-            href={`/pedidos/${pedido.id}/editar`}
-            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
-            aria-label="Editar"
-          >
-            <Pencil className="size-4" strokeWidth={1.75} />
-          </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              if (!confirmDelete(cliente?.nome ?? pedido.id)) return;
-              try {
-                await removePedido(pedido.id);
-                setSel(
-                  pedidos.find(
-                    (p) => p.id !== pedido.id && p.estado !== "cancelado",
-                  )?.id ?? "",
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted transition group-hover:text-strawberry"
+                        strokeWidth={1.75}
+                      />
+                    </Link>
+                  </li>
                 );
-                setMobileDetail(false);
-                toast("Pedido apagado.", "info");
-              } catch (err) {
-                toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
-              }
-            }}
-            className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
-            aria-label="Apagar"
-          >
-            <Trash2 className="size-4" strokeWidth={1.75} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── KPIs ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-        <div className="card">
-          <p className="text-[0.7rem] font-medium text-muted">Valor</p>
-          <p className="mt-0.5 text-base font-semibold text-ink">
-            {mzn(pedido.valor)}
-          </p>
-        </div>
-        <div className="card">
-          <p className="text-[0.7rem] font-medium text-mint">Pago</p>
-          <p className="mt-0.5 text-base font-semibold text-mint">
-            {mzn(pedido.pago)}
-          </p>
-        </div>
-        <div className="card">
-          <p
-            className={`text-[0.7rem] font-medium ${
-              pedido.valor - pedido.pago > 0 ? "text-strawberry" : "text-muted"
-            }`}
-          >
-            Falta
-          </p>
-          <p
-            className={`mt-0.5 text-base font-semibold ${
-              pedido.valor - pedido.pago > 0 ? "text-strawberry" : "text-ink"
-            }`}
-          >
-            {mzn(Math.max(0, pedido.valor - pedido.pago))}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Registar pagamento ─────────────────────────────── */}
-      {pedido.valor - pedido.pago > 0 && (
-        <div className="card">
-          <p className="mb-2.5 text-sm font-semibold text-ink">Registar pagamento</p>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder={`Máx. ${mzn(pedido.valor - pedido.pago)}`}
-              value={pagamentoValor}
-              onChange={(e) => setPagamentoValor(e.target.value)}
-              className="field min-w-0 flex-1"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                const val = Number(pagamentoValor);
-                if (!val || val <= 0) return;
-                try {
-                  await upsertPedido({
-                    ...pedido,
-                    pago: Math.min(pedido.valor, pedido.pago + val),
-                  });
-                  await upsertMovimento({
-                    tipo: "entrada",
-                    descricao: `Pagamento — ${cliente?.nome ?? "cliente"}`,
-                    valor: val,
-                    data: hoje(),
-                    categoria: "Pedidos",
-                  });
-                  setPagamentoValor("");
-                  toast("Pagamento registado.", "success");
-                } catch (err) {
-                  toast(
-                    err instanceof Error ? err.message : "Erro ao registar.",
-                    "error",
-                  );
-                }
-              }}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
-            >
-              <Check className="size-4" strokeWidth={2} />
-              Confirmar
-            </button>
+              })}
+            </ul>
           </div>
-        </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
+        </>
       )}
-
-      {/* ── Produtos ───────────────────────────────────────── */}
-      <div className="card">
-        <div className="mb-3">
-          <h2 className="text-base font-semibold text-ink">Produtos</h2>
-          <p className="text-xs text-muted">Itens deste pedido</p>
-        </div>
-        <ul className="space-y-1.5">
-          {pedido.itens.map((i) => {
-            const pr = produtos.find((p) => p.id === i.produtoId);
-            return (
-              <li key={i.produtoId} className="flex items-center gap-2.5 text-sm">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#f4f5f7]">
-                  <Package className="size-3.5 text-muted" strokeWidth={1.75} />
-                </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-ink">
-                  {pr?.nome ?? "?"}
-                </span>
-                <span className="shrink-0 font-semibold text-ink">
-                  ×{i.quantidade}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* ── Consumo de ingredientes + materiais ───────────── */}
-      {(consumo.length > 0 || consumoMateriais.length > 0) && (
-        <div className="card space-y-4">
-          <div>
-            <h2 className="text-base font-semibold text-ink">Consumo do pedido</h2>
-            <p className="text-xs text-muted">Ingredientes e materiais que saem com este pedido</p>
-          </div>
-
-          {consumo.length > 0 && (
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Ingredientes</p>
-              <ul className="space-y-1">
-                {consumo.map((c) => (
-                  <li key={c.ingredienteId} className="flex items-center gap-2 text-xs text-mint">
-                    <Package className="size-3 shrink-0" strokeWidth={1.75} />
-                    − {formatQty(c.quantidade, c.unidade)} {c.nome.toLowerCase()}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {consumoMateriais.length > 0 && (
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Materiais</p>
-              <ul className="space-y-1">
-                {consumoMateriais.map((m) => (
-                  <li key={m.materialId} className="flex items-center gap-2 text-xs text-blueberry">
-                    <Box className="size-3 shrink-0" strokeWidth={1.75} />
-                    − {m.quantidade % 1 === 0 ? m.quantidade : m.quantidade.toFixed(2)} {m.unidade} {m.nome.toLowerCase()}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {pedido.estoqueConsumido ? (
-            <div className="space-y-2">
-              <p className="flex items-center justify-center gap-1.5 rounded-full bg-mint-soft py-2 text-sm font-semibold text-mint">
-                <Check className="size-4" strokeWidth={2} />
-                Aplicado ao estoque e materiais
-              </p>
-              {pedido.estado === "entregue" ? (
-                <p className="flex items-center justify-center gap-1.5 rounded-full bg-[#f4f5f7] py-2 text-sm font-semibold text-muted">
-                  <Truck className="size-4" strokeWidth={1.75} />
-                  Pedido finalizado — cliente levou
-                </p>
-              ) : (
-                <button
-                  type="button"
-                  disabled={entregaLoading}
-                  onClick={async () => {
-                    setEntregaLoading(true);
-                    try {
-                      await upsertPedido({
-                        ...pedido,
-                        estado: "entregue",
-                      });
-                      toast("Pedido finalizado: cliente levou.", "success");
-                    } catch (err) {
-                      toast(
-                        err instanceof Error
-                          ? err.message
-                          : "Erro ao finalizar.",
-                        "error",
-                      );
-                    } finally {
-                      setEntregaLoading(false);
-                    }
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-blueberry py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
-                >
-                  {entregaLoading ? (
-                    <Loader2 className="size-4 animate-spin" strokeWidth={2} />
-                  ) : (
-                    <Truck className="size-4" strokeWidth={1.75} />
-                  )}
-                  Cliente levou — finalizar
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={consumoLoading}
-                onClick={async () => {
-                  setConsumoLoading(true);
-                  try {
-                    const result = await consumirPedido(pedido.id);
-                    setConsumoMsg(result.msg);
-                    if (result.ok) {
-                      await upsertPedido({
-                        ...pedido,
-                        estoqueConsumido: true,
-                        estado:
-                          pedido.estado === "entregue" ? "entregue" : "pronto",
-                      });
-                    }
-                  } finally {
-                    setConsumoLoading(false);
-                  }
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-mint py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
-              >
-                {consumoLoading && <Loader2 className="size-4 animate-spin" strokeWidth={2} />}
-                Aplicar ao estoque e materiais
-              </button>
-              {consumoMsg && (
-                <p className="text-xs text-mint" role="status">
-                  {consumoMsg}
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="animate-in">
-      <div className="hidden lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-4 lg:h-[calc(100dvh-8rem)] lg:overflow-hidden">
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">{lista}</div>
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">
-          {detalhe ?? (
-            <div className="card flex items-center justify-center py-16 text-sm text-muted">
-              Selecione um pedido para ver os detalhes.
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="lg:hidden">
-        {mobileDetail && pedido ? detalhe : lista}
-      </div>
     </div>
   );
 }

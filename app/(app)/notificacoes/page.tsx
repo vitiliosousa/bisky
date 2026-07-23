@@ -14,7 +14,7 @@ export default function NotificacoesPage() {
   const total = todos.length;
 
   return (
-    <div className="animate-in mx-auto max-w-2xl space-y-3">
+    <div className="animate-in space-y-3">
       <div className="card flex items-center gap-3">
         {total === 0 ? (
           <>

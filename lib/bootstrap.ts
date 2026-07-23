@@ -38,7 +38,10 @@ export function mapBootstrap(data: BootstrapData) {
     produtos: data.produtos.map(mapProduto),
     ingredientes: data.ingredientes,
     pedidos: data.pedidos.map(mapPedido),
-    contasPagar: data.contasPagar,
+    contasPagar: data.contasPagar.map((c) => ({
+      ...c,
+      recorrente: Boolean(c.recorrente),
+    })),
     movimentos: data.movimentos,
     eventos: data.eventos,
     perdas: data.perdas.map((p) => ({
@@ -50,21 +53,33 @@ export function mapBootstrap(data: BootstrapData) {
   };
 }
 
+/** Prisma Json / seed com JSON.stringify pode vir como array ou string. */
+function asArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed) ? (parsed as T[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export function mapProduto(p: Produto): Produto {
   return {
     ...p,
-    receita: Array.isArray(p.receita) ? p.receita : [],
-    modoPreparo: Array.isArray(p.modoPreparo) ? p.modoPreparo : [],
-    materiaisNecessarios: Array.isArray(p.materiaisNecessarios)
-      ? p.materiaisNecessarios
-      : [],
+    receita: asArray(p.receita),
+    modoPreparo: asArray(p.modoPreparo),
+    materiaisNecessarios: asArray(p.materiaisNecessarios),
   };
 }
 
 export function mapPedido(p: Pedido): Pedido {
   return {
     ...p,
-    itens: Array.isArray(p.itens) ? p.itens : [],
+    itens: asArray(p.itens),
     estoqueConsumido: Boolean(p.estoqueConsumido),
   };
 }

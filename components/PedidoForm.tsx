@@ -292,26 +292,6 @@ export function PedidoForm({
               onChange={(e) => setEdit({ ...edit, hora: e.target.value })}
             />
           </label>
-          <label className="lbl">
-            Valor (MZN)
-            <input
-              type="number"
-              min={0}
-              className="field"
-              value={edit.valor || ""}
-              onChange={(e) => setEdit({ ...edit, valor: Number(e.target.value) })}
-            />
-          </label>
-          <label className="lbl">
-            Já pago (MZN)
-            <input
-              type="number"
-              min={0}
-              className="field"
-              value={edit.pago || ""}
-              onChange={(e) => setEdit({ ...edit, pago: Number(e.target.value) })}
-            />
-          </label>
         </div>
       </div>
 
@@ -581,6 +561,36 @@ export function PedidoForm({
             })}
           </ul>
         )}
+      </div>
+
+      {/* ── Pagamento ──────────────────────────────────────── */}
+      <div className="card space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-ink">Pagamento</h2>
+          <p className="text-xs text-muted">Valor total e adiantamento recebido</p>
+        </div>
+        <div className="form-grid sm:grid-cols-2 sm:gap-x-3">
+          <label className="lbl">
+            Valor (MZN)
+            <input
+              type="number"
+              min={0}
+              className="field"
+              value={edit.valor || ""}
+              onChange={(e) => setEdit({ ...edit, valor: Number(e.target.value) })}
+            />
+          </label>
+          <label className="lbl">
+            Já pago (MZN)
+            <input
+              type="number"
+              min={0}
+              className="field"
+              value={edit.pago || ""}
+              onChange={(e) => setEdit({ ...edit, pago: Number(e.target.value) })}
+            />
+          </label>
+        </div>
       </div>
 
       <FormActions onCancel={onCancel} loading={loading} />

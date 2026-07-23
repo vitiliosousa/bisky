@@ -1,31 +1,157 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
-import { confirmDelete, toast } from "@/components/ui";
+import { Pagination } from "@/components/Pagination";
 import { custoUnitario, formatQty } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import type { Ingrediente } from "@/lib/types";
+import { usePagination } from "@/lib/usePagination";
 import {
   AlertTriangle,
-  ArrowLeft,
-  Check,
+  ChevronRight,
+  LayoutGrid,
+  List,
   Package,
-  Pencil,
   Plus,
   Search,
-  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+function GridIngredientes({ items }: { items: Ingrediente[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 xl:gap-4">
+      {items.map((i) => {
+        const baixo = i.quantidadeAtual < i.estoqueMinimo;
+        const unitario = custoUnitario(i);
+        return (
+          <Link
+            key={i.id}
+            href={`/ingredientes/${i.id}`}
+            className="card group flex flex-col gap-2.5 transition hover:shadow-md sm:gap-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-full sm:size-11 ${
+                  baixo
+                    ? "bg-strawberry-soft text-strawberry"
+                    : "bg-blueberry-soft text-blueberry"
+                }`}
+              >
+                {baixo ? (
+                  <AlertTriangle className="size-4 sm:size-5" strokeWidth={1.75} />
+                ) : (
+                  <Package className="size-4 sm:size-5" strokeWidth={1.75} />
+                )}
+              </span>
+              <span className="truncate rounded-full bg-[#f4f5f7] px-2.5 py-1 text-[0.7rem] font-medium text-muted sm:px-3 sm:text-xs">
+                {i.unidade}
+              </span>
+            </div>
+
+            <p
+              className={`truncate text-sm font-semibold sm:text-base ${
+                baixo
+                  ? "text-strawberry"
+                  : "text-ink group-hover:text-strawberry"
+              }`}
+            >
+              {i.nome}
+            </p>
+
+            <div className="mt-auto flex items-end justify-between gap-1.5">
+              <div className="min-w-0">
+                <p
+                  className={`truncate text-lg font-semibold tracking-tight sm:text-2xl ${
+                    baixo ? "text-strawberry" : "text-ink"
+                  }`}
+                >
+                  {formatQty(i.quantidadeAtual, i.unidade)}
+                </p>
+                <p className="mt-0.5 truncate text-[0.7rem] text-muted sm:text-xs">
+                  mín. {formatQty(i.estoqueMinimo, i.unidade)}
+                </p>
+              </div>
+              {unitario > 0 && (
+                <span className="shrink-0 rounded-full bg-[#f4f5f7] px-2 py-0.5 text-[0.65rem] font-semibold text-muted sm:text-xs">
+                  {mzn(Math.round(unitario))}/{i.unidade}
+                </span>
+              )}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function ListaIngredientes({ items }: { items: Ingrediente[] }) {
+  return (
+    <div className="card p-2!">
+      <ul className="divide-y divide-line">
+        {items.map((i) => {
+          const baixo = i.quantidadeAtual < i.estoqueMinimo;
+          return (
+            <li key={i.id}>
+              <Link
+                href={`/ingredientes/${i.id}`}
+                className="group flex items-center gap-3 px-3 py-3.5 sm:gap-4"
+              >
+                <span
+                  className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
+                    baixo
+                      ? "bg-strawberry-soft text-strawberry"
+                      : "bg-blueberry-soft text-blueberry"
+                  }`}
+                >
+                  {baixo ? (
+                    <AlertTriangle className="size-5" strokeWidth={1.75} />
+                  ) : (
+                    <Package className="size-5" strokeWidth={1.75} />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block truncate text-sm font-semibold ${
+                      baixo
+                        ? "text-strawberry"
+                        : "text-ink group-hover:text-strawberry"
+                    }`}
+                  >
+                    {i.nome}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    mín. {formatQty(i.estoqueMinimo, i.unidade)}
+                  </span>
+                </span>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  <span
+                    className={`text-sm font-semibold ${
+                      baixo ? "text-strawberry" : "text-ink"
+                    }`}
+                  >
+                    {formatQty(i.quantidadeAtual, i.unidade)}
+                  </span>
+                  <ChevronRight
+                    className="size-4 text-muted transition group-hover:text-strawberry"
+                    strokeWidth={1.75}
+                  />
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function IngredientesPage() {
-  const { ingredientes, upsertIngrediente, removeIngrediente } = useStore();
+  const { ingredientes } = useStore();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "falta">("todos");
-  const [sel, setSel] = useState(ingredientes[0]?.id ?? "");
-  const [mobileDetail, setMobileDetail] = useState(false);
-  const [entradaQty, setEntradaQty] = useState("");
-  const [entradaPreco, setEntradaPreco] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
 
@@ -46,31 +172,11 @@ export default function IngredientesPage() {
       });
   }, [ingredientes, busca, filtro]);
 
-  const ing =
-    ingredientes.find((i) => i.id === sel) ?? filtered[0] ?? undefined;
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
 
-  function selectIng(id: string) {
-    setSel(id);
-    setEntradaQty("");
-    setEntradaPreco("");
-    setMobileDetail(true);
-  }
-
-  async function apagar() {
-    if (!ing) return;
-    if (!confirmDelete(ing.nome)) return;
-    try {
-      await removeIngrediente(ing.id);
-      setSel(ingredientes.find((i) => i.id !== ing.id)?.id ?? "");
-      setMobileDetail(false);
-      toast("Ingrediente removido.", "info");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
-    }
-  }
-
-  const lista = (
-    <div className="flex flex-col gap-3">
+  return (
+    <div className="animate-in space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label
           className="search-pill w-full min-w-0 sm:flex-1"
@@ -84,6 +190,7 @@ export default function IngredientesPage() {
             onChange={(e) => setBusca(e.target.value)}
           />
         </label>
+
         <div className="flex items-center gap-2">
           <select
             value={filtro}
@@ -102,6 +209,32 @@ export default function IngredientesPage() {
               Em falta{falta.length > 0 ? ` (${falta.length})` : ""}
             </option>
           </select>
+
+          <div className="hidden h-10 shrink-0 items-center gap-0.5 rounded-full bg-[#f4f5f7] p-1 sm:flex">
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              className={`flex size-8 items-center justify-center rounded-full transition ${
+                view === "grid" ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"
+              }`}
+              aria-label="Vista em cartões"
+              aria-pressed={view === "grid"}
+            >
+              <LayoutGrid className="size-4" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={`flex size-8 items-center justify-center rounded-full transition ${
+                view === "list" ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"
+              }`}
+              aria-label="Vista em lista"
+              aria-pressed={view === "list"}
+            >
+              <List className="size-4" strokeWidth={1.75} />
+            </button>
+          </div>
+
           <Link
             href="/ingredientes/novo"
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
@@ -116,268 +249,41 @@ export default function IngredientesPage() {
       {filtered.length === 0 ? (
         <div className="card">
           <Empty
-            message={busca || filtro !== "todos" ? "Nenhum ingrediente encontrado." : "Sem ingredientes ainda."}
-            hint={busca || filtro !== "todos" ? undefined : "Adicione o seu primeiro ingrediente."}
+            message={
+              busca || filtro !== "todos"
+                ? "Nenhum ingrediente encontrado."
+                : "Sem ingredientes ainda."
+            }
+            hint={
+              busca || filtro !== "todos"
+                ? undefined
+                : "Adicione o seu primeiro ingrediente."
+            }
           />
         </div>
       ) : (
-        <div className="card p-2!">
-          <ul className="space-y-0.5">
-            {filtered.map((i) => {
-              const baixo = i.quantidadeAtual < i.estoqueMinimo;
-              const isActive = ing?.id === i.id;
-              return (
-                <li key={i.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectIng(i.id)}
-                    className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-left transition ${
-                      isActive ? "bg-strawberry-soft" : "hover:bg-[#f8f8f9]"
-                    }`}
-                  >
-                    <span
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-                        baixo
-                          ? "bg-strawberry-soft text-strawberry"
-                          : "bg-blueberry text-white"
-                      }`}
-                    >
-                      {baixo ? (
-                        <AlertTriangle className="size-4" strokeWidth={1.75} />
-                      ) : (
-                        <Package className="size-4" strokeWidth={1.75} />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={`block truncate text-sm font-semibold ${
-                          isActive
-                            ? "text-strawberry"
-                            : baixo
-                              ? "text-strawberry"
-                              : "text-ink group-hover:text-strawberry"
-                        }`}
-                      >
-                        {i.nome}
-                      </span>
-                      <span className="block truncate text-xs text-muted">
-                        mín. {i.estoqueMinimo} {i.unidade}
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 text-sm font-semibold ${
-                        baixo ? "text-strawberry" : "text-ink"
-                      }`}
-                    >
-                      {i.quantidadeAtual}{" "}
-                      <span className="text-xs font-normal text-muted">
-                        {i.unidade}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-
-  const detalhe = ing && (() => {
-    const baixo = ing.quantidadeAtual < ing.estoqueMinimo;
-    const unitario = custoUnitario(ing);
-    const valorStock = ing.quantidadeAtual * unitario;
-
-    return (
-      <div className="flex flex-col gap-5">
-        <div className="card flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setMobileDetail(false)}
-            className="shrink-0 text-muted transition hover:text-ink lg:hidden"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="size-4" strokeWidth={1.75} />
-          </button>
-          <span
-            className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
-              baixo
-                ? "bg-strawberry-soft text-strawberry"
-                : "bg-blueberry text-white"
-            }`}
-          >
-            {baixo ? (
-              <AlertTriangle className="size-5" strokeWidth={1.75} />
-            ) : (
-              <Package className="size-5" strokeWidth={1.75} />
-            )}
-          </span>
-          <div className="min-w-0 flex-1">
-            {baixo && (
-              <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-strawberry">
-                Abaixo do mínimo
-              </p>
-            )}
-            <p className="truncate text-lg font-semibold text-ink">{ing.nome}</p>
-            <p className="text-xs text-muted">
-              {formatQty(ing.quantidadeAtual, ing.unidade)} em stock
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Link
-              href={`/ingredientes/${ing.id}/editar`}
-              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
-              aria-label="Editar"
-            >
-              <Pencil className="size-4" strokeWidth={1.75} />
-            </Link>
-            <button
-              type="button"
-              onClick={apagar}
-              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
-              aria-label="Apagar"
-            >
-              <Trash2 className="size-4" strokeWidth={1.75} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Quantidade</p>
-            <p
-              className={`mt-0.5 text-base font-semibold ${
-                baixo ? "text-strawberry" : "text-ink"
-              }`}
-            >
-              {formatQty(ing.quantidadeAtual, ing.unidade)}
-            </p>
-          </div>
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Mínimo</p>
-            <p className="mt-0.5 text-base font-semibold text-ink">
-              {formatQty(ing.estoqueMinimo, ing.unidade)}
-            </p>
-          </div>
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Custo unitário</p>
-            <p className="mt-0.5 text-base font-semibold text-ink">
-              {mzn(Math.round(unitario))}
-              <span className="text-xs font-normal text-muted">/{ing.unidade}</span>
-            </p>
-          </div>
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Valor em stock</p>
-            <p className="mt-0.5 text-base font-semibold text-caramel">
-              {mzn(Math.round(valorStock))}
-            </p>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="mb-3">
-            <h2 className="text-base font-semibold text-ink">Última compra</h2>
-            <p className="text-xs text-muted">Preço e tamanho do lote</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[0.7rem] font-medium text-muted">Preço do lote</p>
-              <p className="mt-0.5 text-sm font-semibold text-ink">
-                {mzn(ing.precoCompra)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[0.7rem] font-medium text-muted">Quantidade</p>
-              <p className="mt-0.5 text-sm font-semibold text-ink">
-                {formatQty(ing.quantidadeCompra, ing.unidade)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="mb-2.5">
-            <p className="text-sm font-semibold text-ink">Registrar compra</p>
-            <p className="text-xs text-muted">
-              Adiciona ao stock e actualiza o custo unitário
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              type="number"
-              min="0"
-              step="any"
-              placeholder={`Qtd. (${ing.unidade})`}
-              value={entradaQty}
-              onChange={(e) => setEntradaQty(e.target.value)}
-              className="field min-w-0 flex-1"
-            />
-            <input
-              type="number"
-              min="0"
-              placeholder="Preço do lote (MZN)"
-              value={entradaPreco}
-              onChange={(e) => setEntradaPreco(e.target.value)}
-              className="field min-w-0 flex-1"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                const qty = Number(entradaQty);
-                const preco = Number(entradaPreco);
-                if (!qty || qty <= 0) {
-                  toast("Indique a quantidade comprada.", "error");
-                  return;
-                }
-                if (!preco || preco <= 0) {
-                  toast("Indique o preço do lote.", "error");
-                  return;
-                }
-                try {
-                  await upsertIngrediente({
-                    ...ing,
-                    quantidadeAtual: ing.quantidadeAtual + qty,
-                    quantidadeCompra: qty,
-                    precoCompra: preco,
-                  });
-                  setEntradaQty("");
-                  setEntradaPreco("");
-                  toast(`Compra registada: +${qty} ${ing.unidade}.`, "success");
-                } catch (err) {
-                  toast(
-                    err instanceof Error ? err.message : "Erro ao actualizar.",
-                    "error",
-                  );
-                }
-              }}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-mint px-4 text-sm font-semibold text-white transition hover:brightness-110"
-            >
-              <Check className="size-4" strokeWidth={2} />
-              Registrar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  })();
-
-  return (
-    <div className="animate-in">
-      <div className="hidden lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-4 lg:h-[calc(100dvh-8rem)] lg:overflow-hidden">
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">{lista}</div>
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">
-          {detalhe ?? (
-            <div className="card flex items-center justify-center py-16 text-sm text-muted">
-              Selecione um ingrediente para ver os detalhes.
-            </div>
+        <>
+          {view === "grid" ? (
+            <GridIngredientes items={pageItems} />
+          ) : (
+            <>
+              <div className="sm:hidden">
+                <GridIngredientes items={pageItems} />
+              </div>
+              <div className="hidden sm:block">
+                <ListaIngredientes items={pageItems} />
+              </div>
+            </>
           )}
-        </div>
-      </div>
-
-      <div className="lg:hidden">
-        {mobileDetail && ing ? detalhe : lista}
-      </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
+        </>
+      )}
     </div>
   );
 }

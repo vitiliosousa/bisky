@@ -1,7 +1,9 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
+import { Pagination } from "@/components/Pagination";
 import { useStore } from "@/lib/store";
+import { usePagination } from "@/lib/usePagination";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -19,9 +21,9 @@ export default function ClientesPage() {
   const { clientes } = useStore();
   const [busca, setBusca] = useState("");
 
-  const grupos = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = busca.toLowerCase().trim();
-    const filtered = clientes
+    return clientes
       .filter(
         (c) =>
           !q ||
@@ -29,21 +31,23 @@ export default function ClientesPage() {
           c.telefone.toLowerCase().includes(q),
       )
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  }, [clientes, busca]);
 
-    const map = new Map<string, typeof filtered>();
-    for (const c of filtered) {
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
+
+  const grupos = useMemo(() => {
+    const map = new Map<string, typeof pageItems>();
+    for (const c of pageItems) {
       const letra = c.nome[0]?.toUpperCase() ?? "#";
       if (!map.has(letra)) map.set(letra, []);
       map.get(letra)!.push(c);
     }
     return [...map.entries()];
-  }, [clientes, busca]);
-
-  const total = grupos.reduce((s, [, g]) => s + g.length, 0);
+  }, [pageItems]);
 
   return (
     <div className="animate-in space-y-4">
-      {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         <label className="search-pill min-w-0 flex-1" style={{ maxWidth: "none" }}>
           <Search className="size-4 shrink-0" strokeWidth={1.75} />
@@ -64,7 +68,6 @@ export default function ClientesPage() {
         </Link>
       </div>
 
-      {/* ── Lista alfabética ────────────────────────────────── */}
       {total === 0 ? (
         <div className="card">
           <Empty
@@ -73,41 +76,50 @@ export default function ClientesPage() {
           />
         </div>
       ) : (
-        <div className="card p-0! overflow-hidden">
-          {grupos.map(([letra, grupo], gi) => (
-            <div key={letra}>
-              {/* Header de letra */}
-              <div className={`bg-[#f8f8f9] px-4 py-1.5 ${gi > 0 ? "border-t border-line" : ""}`}>
-                <span className="text-xs font-bold text-strawberry">{letra}</span>
-              </div>
-              {/* Contactos do grupo */}
-              <ul>
-                {grupo.map((c, ci) => (
-                  <li key={c.id} className={ci > 0 ? "border-t border-line" : ""}>
-                    <Link
-                      href={`/clientes/${c.id}`}
-                      className="group flex items-center gap-3.5 px-4 py-3 transition hover:bg-[#f8f8f9]"
-                    >
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-strawberry text-xs font-bold text-white">
-                        {initials(c.nome)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-ink group-hover:text-strawberry">
-                          {c.nome}
+        <>
+          <div className="card p-0! overflow-hidden">
+            {grupos.map(([letra, grupo], gi) => (
+              <div key={letra}>
+                <div
+                  className={`bg-[#f8f8f9] px-4 py-1.5 ${gi > 0 ? "border-t border-line" : ""}`}
+                >
+                  <span className="text-xs font-bold text-strawberry">{letra}</span>
+                </div>
+                <ul>
+                  {grupo.map((c, ci) => (
+                    <li key={c.id} className={ci > 0 ? "border-t border-line" : ""}>
+                      <Link
+                        href={`/clientes/${c.id}`}
+                        className="group flex items-center gap-3.5 px-4 py-3 transition hover:bg-[#f8f8f9]"
+                      >
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-strawberry text-xs font-bold text-white">
+                          {initials(c.nome)}
                         </span>
-                        {c.telefone && (
-                          <span className="block truncate text-xs text-muted">
-                            {c.telefone}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-ink group-hover:text-strawberry">
+                            {c.nome}
                           </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+                          {c.telefone && (
+                            <span className="block truncate text-xs text-muted">
+                              {c.telefone}
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
+        </>
       )}
     </div>
   );

@@ -3,15 +3,18 @@
 import { toast } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const CATEGORIAS = ["Embalagem", "Decoração", "Limpeza", "Escritório", "Outro"];
 const UNIDADES = ["un", "rolo", "metro", "caixa", "pacote", "par", "folha"];
 
-export default function NovoMaterialPage() {
-  const { upsertMaterial } = useStore();
+export default function EditarMaterialPage() {
+  const params = useParams<{ id: string }>();
+  const { materiais, upsertMaterial } = useStore();
   const router = useRouter();
+  const mat = materiais.find((m) => m.id === params.id);
+
   const [form, setForm] = useState({
     nome: "",
     categoria: "Embalagem",
@@ -21,11 +24,36 @@ export default function NovoMaterialPage() {
     estoqueMinimo: "",
   });
 
+  useEffect(() => {
+    if (!mat) return;
+    setForm({
+      nome: mat.nome,
+      categoria: mat.categoria,
+      quantidade: String(mat.quantidade),
+      unidade: mat.unidade,
+      precoUnitario: String(mat.precoUnitario),
+      estoqueMinimo: String(mat.estoqueMinimo),
+    });
+  }, [mat]);
+
+  if (!mat) {
+    return (
+      <div className="animate-in">
+        <div className="card">
+          <p className="px-4 py-10 text-center text-sm text-muted">
+            Material não encontrado.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   async function submeter(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) return;
     try {
       await upsertMaterial({
+        id: mat!.id,
         nome: form.nome.trim(),
         categoria: form.categoria,
         quantidade: Number(form.quantidade) || 0,
@@ -33,8 +61,8 @@ export default function NovoMaterialPage() {
         precoUnitario: Number(form.precoUnitario) || 0,
         estoqueMinimo: Number(form.estoqueMinimo) || 0,
       });
-      toast("Material criado.");
-      router.replace("/materiais");
+      toast("Material actualizado.");
+      router.replace(`/materiais/${mat!.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : "Erro ao guardar.", "error");
     }
@@ -45,31 +73,46 @@ export default function NovoMaterialPage() {
       <form onSubmit={submeter} className="space-y-4">
         <div className="card space-y-4">
           <div>
-            <h2 className="text-base font-semibold text-ink">Novo material</h2>
-            <p className="text-xs text-muted">Caixas, fitas, velas e outros consumíveis</p>
+            <h2 className="text-base font-semibold text-ink">Editar material</h2>
+            <p className="text-xs text-muted">Actualize os dados do consumível</p>
           </div>
 
-          <div className="form-grid sm:cols-2 sm:grid-cols-2 sm:gap-x-3">
+          <div className="form-grid sm:grid-cols-2 sm:gap-x-3">
             <label className="lbl sm:col-span-2">
               Nome
               <input
                 className="field"
                 required
-                placeholder="Ex.: Caixa de bolo G"
                 value={form.nome}
                 onChange={(e) => setForm({ ...form, nome: e.target.value })}
               />
             </label>
             <label className="lbl">
               Categoria
-              <select className="field" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
-                {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
+              <select
+                className="field"
+                value={form.categoria}
+                onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+              >
+                {CATEGORIAS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="lbl">
               Unidade
-              <select className="field" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })}>
-                {UNIDADES.map((u) => <option key={u} value={u}>{u}</option>)}
+              <select
+                className="field"
+                value={form.unidade}
+                onChange={(e) => setForm({ ...form, unidade: e.target.value })}
+              >
+                {UNIDADES.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="lbl">
@@ -78,7 +121,6 @@ export default function NovoMaterialPage() {
                 type="number"
                 min={0}
                 className="field"
-                placeholder="0"
                 value={form.quantidade}
                 onChange={(e) => setForm({ ...form, quantidade: e.target.value })}
               />
@@ -89,9 +131,10 @@ export default function NovoMaterialPage() {
                 type="number"
                 min={0}
                 className="field"
-                placeholder="0"
                 value={form.estoqueMinimo}
-                onChange={(e) => setForm({ ...form, estoqueMinimo: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, estoqueMinimo: e.target.value })
+                }
               />
             </label>
             <label className="lbl sm:col-span-2">
@@ -100,19 +143,26 @@ export default function NovoMaterialPage() {
                 type="number"
                 min={0}
                 className="field"
-                placeholder="0"
                 value={form.precoUnitario}
-                onChange={(e) => setForm({ ...form, precoUnitario: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, precoUnitario: e.target.value })
+                }
               />
             </label>
           </div>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Link href="/materiais" className="inline-flex h-10 items-center rounded-full bg-[#f4f5f7] px-5 text-sm font-semibold text-ink-soft transition hover:bg-line">
+          <Link
+            href={`/materiais/${mat.id}`}
+            className="inline-flex h-10 items-center rounded-full bg-[#f4f5f7] px-5 text-sm font-semibold text-ink-soft transition hover:bg-line"
+          >
             Cancelar
           </Link>
-          <button type="submit" className="inline-flex h-10 items-center rounded-full bg-strawberry px-5 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110">
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center rounded-full bg-strawberry px-5 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110"
+          >
             Guardar
           </button>
         </div>

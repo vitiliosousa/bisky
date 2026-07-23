@@ -1,17 +1,18 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
-import { confirmDelete, toast } from "@/components/ui";
-import { hoje, dataCurta, mzn } from "@/lib/format";
+import { Pagination } from "@/components/Pagination";
+import { dataCurta, hoje, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import { usePagination } from "@/lib/usePagination";
 import {
   AlertTriangle,
   Check,
+  ChevronRight,
   Clock,
-  Pencil,
   Plus,
   Search,
-  Trash2,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -19,21 +20,22 @@ import { useMemo, useState } from "react";
 type Filtro = "todas" | "abertas" | "atrasadas" | "pagas";
 
 export default function ContasPagarPage() {
-  const { contasPagar, upsertContaPagar, removeContaPagar, upsertMovimento } =
-    useStore();
+  const { contasPagar } = useStore();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todas");
-  const [sel, setSel] = useState(contasPagar[0]?.id ?? "");
-  const [mobileDetail, setMobileDetail] = useState(false);
 
   const hojeISO = hoje();
   const abertas = contasPagar.filter((c) => !c.paga);
   const atrasadas = abertas.filter((c) => c.vencimento < hojeISO);
   const totalAberto = abertas.reduce((s, c) => s + c.valor, 0);
+  const totalAtrasado = atrasadas.reduce((s, c) => s + c.valor, 0);
+  const totalPago = contasPagar
+    .filter((c) => c.paga)
+    .reduce((s, c) => s + c.valor, 0);
 
   const filtered = useMemo(() => {
-    const q = busca.toLowerCase();
-    return contasPagar
+    const q = busca.toLowerCase().trim();
+    return [...contasPagar]
       .filter((c) => {
         if (filtro === "abertas" && c.paga) return false;
         if (filtro === "atrasadas" && (c.paga || c.vencimento >= hojeISO))
@@ -54,47 +56,58 @@ export default function ContasPagarPage() {
       });
   }, [contasPagar, busca, filtro, hojeISO]);
 
-  const conta = contasPagar.find((c) => c.id === sel) ?? filtered[0];
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
 
-  function selectConta(id: string) {
-    setSel(id);
-    setMobileDetail(true);
-  }
+  return (
+    <div className="animate-in space-y-4">
+      {/* ── KPIs ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <div className="card flex flex-col justify-between !p-3.5 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">Em aberto</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-caramel-soft text-caramel sm:size-10">
+              <Clock className="size-4 sm:size-[1.125rem]" strokeWidth={1.75} />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-caramel sm:mt-3 sm:text-3xl">
+            {mzn(totalAberto)}
+          </p>
+          <p className="mt-1 text-[0.7rem] text-muted sm:text-xs">
+            {abertas.length} conta{abertas.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card flex flex-col justify-between !p-3.5 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">Atrasadas</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-strawberry sm:size-10">
+              <AlertTriangle
+                className="size-4 sm:size-[1.125rem]"
+                strokeWidth={1.75}
+              />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-strawberry sm:mt-3 sm:text-3xl">
+            {mzn(totalAtrasado)}
+          </p>
+          <p className="mt-1 text-[0.7rem] text-muted sm:text-xs">
+            {atrasadas.length} conta{atrasadas.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card col-span-2 flex flex-col justify-between !p-3.5 sm:col-span-1 sm:!p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted sm:text-sm">Pagas</p>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-mint-soft text-mint sm:size-10">
+              <Wallet className="size-4 sm:size-[1.125rem]" strokeWidth={1.75} />
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-mint sm:mt-3 sm:text-3xl">
+            {mzn(totalPago)}
+          </p>
+        </div>
+      </div>
 
-  async function marcarPaga() {
-    if (!conta) return;
-    try {
-      await upsertContaPagar({ ...conta, paga: true });
-      await upsertMovimento({
-        tipo: "saida",
-        descricao: conta.descricao
-          ? `${conta.fornecedor} — ${conta.descricao}`
-          : conta.fornecedor,
-        valor: conta.valor,
-        data: hojeISO,
-        categoria: "Fornecedores",
-      });
-      toast("Marcada como paga.", "success");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Erro ao marcar.", "error");
-    }
-  }
-
-  async function apagar() {
-    if (!conta) return;
-    if (!confirmDelete(conta.fornecedor)) return;
-    try {
-      await removeContaPagar(conta.id);
-      setSel(contasPagar.find((c) => c.id !== conta.id)?.id ?? "");
-      setMobileDetail(false);
-      toast("Conta apagada.", "info");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Erro ao apagar.", "error");
-    }
-  }
-
-  const lista = (
-    <div className="flex flex-col gap-3">
+      {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label
           className="search-pill w-full min-w-0 sm:flex-1"
@@ -108,6 +121,7 @@ export default function ContasPagarPage() {
             onChange={(e) => setBusca(e.target.value)}
           />
         </label>
+
         <div className="flex items-center gap-2">
           <select
             value={filtro}
@@ -128,6 +142,7 @@ export default function ContasPagarPage() {
             </option>
             <option value="pagas">Pagas</option>
           </select>
+
           <Link
             href="/contas-pagar/novo"
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
@@ -139,219 +154,100 @@ export default function ContasPagarPage() {
         </div>
       </div>
 
+      {/* ── Lista ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="card">
           <Empty
-            message={busca || filtro !== "todas" ? "Nenhuma conta encontrada." : "Sem contas a pagar ainda."}
-            hint={busca || filtro !== "todas" ? undefined : "Adicione a sua primeira conta."}
+            message={
+              busca || filtro !== "todas"
+                ? "Nenhuma conta encontrada."
+                : "Sem contas a pagar ainda."
+            }
+            hint={
+              busca || filtro !== "todas"
+                ? undefined
+                : "Adicione a sua primeira conta."
+            }
           />
         </div>
       ) : (
-        <div className="card p-2!">
-          <ul className="space-y-0.5">
-            {filtered.map((c) => {
-              const atrasada = !c.paga && c.vencimento < hojeISO;
-              const isActive = conta?.id === c.id;
-              return (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectConta(c.id)}
-                    className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3.5 text-left transition ${
-                      isActive ? "bg-strawberry-soft" : "hover:bg-[#f8f8f9]"
-                    }`}
-                  >
-                    <span
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-                        c.paga
-                          ? "bg-mint-soft text-mint"
-                          : atrasada
-                            ? "bg-strawberry-soft text-strawberry"
-                            : "bg-caramel-soft text-caramel"
-                      }`}
+        <>
+          <div className="card p-2!">
+            <ul className="divide-y divide-line">
+              {pageItems.map((c) => {
+                const atrasada = !c.paga && c.vencimento < hojeISO;
+                return (
+                  <li key={c.id}>
+                    <Link
+                      href={`/contas-pagar/${c.id}`}
+                      className="group flex items-center gap-3 px-3 py-3.5 sm:gap-4"
                     >
-                      {c.paga ? (
-                        <Check className="size-4" strokeWidth={2} />
-                      ) : atrasada ? (
-                        <AlertTriangle className="size-4" strokeWidth={1.75} />
-                      ) : (
-                        <Clock className="size-4" strokeWidth={1.75} />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
                       <span
-                        className={`block truncate text-sm font-semibold ${
-                          isActive
-                            ? "text-strawberry"
-                            : "text-ink group-hover:text-strawberry"
-                        }`}
-                      >
-                        {c.fornecedor}
-                      </span>
-                      <span className="block truncate text-xs text-muted">
-                        Vence {dataCurta(c.vencimento)}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span
-                        className={`text-sm font-semibold ${
-                          c.paga ? "text-muted line-through" : "text-ink"
-                        }`}
-                      >
-                        {mzn(c.valor)}
-                      </span>
-                      <span
-                        className={`text-[0.65rem] font-semibold ${
+                        className={`flex size-10 shrink-0 items-center justify-center rounded-full sm:size-11 ${
                           c.paga
-                            ? "text-mint"
+                            ? "bg-mint-soft text-mint"
                             : atrasada
-                              ? "text-strawberry"
-                              : "text-caramel"
+                              ? "bg-strawberry-soft text-strawberry"
+                              : "bg-caramel-soft text-caramel"
                         }`}
                       >
-                        {c.paga ? "Paga" : atrasada ? "Atrasada" : "Em aberto"}
+                        {c.paga ? (
+                          <Check className="size-4.5" strokeWidth={2} />
+                        ) : atrasada ? (
+                          <AlertTriangle className="size-4.5" strokeWidth={1.75} />
+                        ) : (
+                          <Clock className="size-4.5" strokeWidth={1.75} />
+                        )}
                       </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink group-hover:text-strawberry">
+                          {c.fornecedor}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted">
+                          Vence {dataCurta(c.vencimento)}
+                          {c.recorrente ? " · Mensal" : ""}
+                          {c.descricao ? ` · ${c.descricao}` : ""}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span
+                          className={`text-sm font-semibold ${
+                            c.paga ? "text-muted line-through" : "text-ink"
+                          }`}
+                        >
+                          {mzn(c.valor)}
+                        </span>
+                        <span
+                          className={`text-[0.65rem] font-semibold ${
+                            c.paga
+                              ? "text-mint"
+                              : atrasada
+                                ? "text-strawberry"
+                                : "text-caramel"
+                          }`}
+                        >
+                          {c.paga ? "Paga" : atrasada ? "Atrasada" : "Em aberto"}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted transition group-hover:text-strawberry"
+                        strokeWidth={1.75}
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
+        </>
       )}
-    </div>
-  );
-
-  const detalhe = conta && (() => {
-    const atrasada = !conta.paga && conta.vencimento < hojeISO;
-
-    return (
-      <div className="flex flex-col gap-5">
-        <div className="card flex items-center gap-3">
-          <span
-            className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
-              conta.paga
-                ? "bg-mint-soft text-mint"
-                : atrasada
-                  ? "bg-strawberry-soft text-strawberry"
-                  : "bg-caramel-soft text-caramel"
-            }`}
-          >
-            {conta.paga ? (
-              <Check className="size-5" strokeWidth={2} />
-            ) : atrasada ? (
-              <AlertTriangle className="size-5" strokeWidth={1.75} />
-            ) : (
-              <Clock className="size-5" strokeWidth={1.75} />
-            )}
-          </span>
-          <div className="min-w-0 flex-1">
-            {atrasada && (
-              <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-strawberry">
-                Atrasada
-              </p>
-            )}
-            <p className="truncate text-lg font-semibold text-ink">
-              {conta.fornecedor}
-            </p>
-            {conta.descricao && (
-              <p className="truncate text-xs text-muted">{conta.descricao}</p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Link
-              href={`/contas-pagar/${conta.id}/editar`}
-              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-[#f4f5f7] hover:text-ink"
-              aria-label="Editar"
-            >
-              <Pencil className="size-4" strokeWidth={1.75} />
-            </Link>
-            <button
-              type="button"
-              onClick={apagar}
-              className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
-              aria-label="Apagar"
-            >
-              <Trash2 className="size-4" strokeWidth={1.75} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Valor</p>
-            <p
-              className={`mt-0.5 text-base font-semibold ${
-                conta.paga ? "text-muted line-through" : "text-ink"
-              }`}
-            >
-              {mzn(conta.valor)}
-            </p>
-          </div>
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Vencimento</p>
-            <p
-              className={`mt-0.5 text-base font-semibold ${
-                atrasada ? "text-strawberry" : "text-ink"
-              }`}
-            >
-              {dataCurta(conta.vencimento)}
-            </p>
-          </div>
-          <div className="card">
-            <p className="text-[0.7rem] font-medium text-muted">Estado</p>
-            <p
-              className={`mt-0.5 text-base font-semibold ${
-                conta.paga
-                  ? "text-mint"
-                  : atrasada
-                    ? "text-strawberry"
-                    : "text-caramel"
-              }`}
-            >
-              {conta.paga ? "Paga" : atrasada ? "Atrasada" : "Em aberto"}
-            </p>
-          </div>
-        </div>
-
-        {!conta.paga && (
-          <div className="card">
-            <div className="mb-3">
-              <h2 className="text-base font-semibold text-ink">Pagamento</h2>
-              <p className="text-xs text-muted">
-                Marca como paga e regista a saída no fluxo de caixa
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={marcarPaga}
-              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-mint py-2 text-sm font-semibold text-white transition hover:brightness-110"
-            >
-              <Check className="size-4" strokeWidth={2} />
-              Marcar como paga
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  })();
-
-  return (
-    <div className="animate-in">
-      <div className="hidden lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-4 lg:h-[calc(100dvh-8rem)] lg:overflow-hidden">
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">{lista}</div>
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-4">
-          {detalhe ?? (
-            <div className="card flex items-center justify-center py-16 text-sm text-muted">
-              Selecione uma conta para ver os detalhes.
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="lg:hidden">
-        {mobileDetail && conta ? detalhe : lista}
-      </div>
     </div>
   );
 }

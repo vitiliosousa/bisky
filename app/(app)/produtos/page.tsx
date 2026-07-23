@@ -1,10 +1,12 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
+import { Pagination } from "@/components/Pagination";
 import { custoProduto, margemLucro } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { Ingrediente, Material, Produto } from "@/lib/types";
+import { usePagination } from "@/lib/usePagination";
 import {
   ChevronRight,
   LayoutGrid,
@@ -14,7 +16,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 function MargemBadge({ margem }: { margem: number }) {
   if (margem >= 50)
@@ -149,12 +151,19 @@ export default function ProdutosPage() {
 
   const categorias = [...new Set(produtos.map((p) => p.categoria))];
 
-  const filtered = produtos.filter(
-    (p) =>
-      (p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        p.categoria.toLowerCase().includes(busca.toLowerCase())) &&
-      (!categoria || p.categoria === categoria),
+  const filtered = useMemo(
+    () =>
+      produtos.filter(
+        (p) =>
+          (p.nome.toLowerCase().includes(busca.toLowerCase()) ||
+            p.categoria.toLowerCase().includes(busca.toLowerCase())) &&
+          (!categoria || p.categoria === categoria),
+      ),
+    [produtos, busca, categoria],
   );
+
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
 
   return (
     <div className="animate-in space-y-4">
@@ -239,29 +248,39 @@ export default function ProdutosPage() {
             hint={busca || categoria ? undefined : "Adicione o seu primeiro produto."}
           />
         </div>
-      ) : view === "grid" ? (
-        <GridProdutos
-          produtos={filtered}
-          ingredientes={ingredientes}
-          materiais={materiais}
-        />
       ) : (
         <>
-          {/* No mobile a lista não existe — mostra sempre a grelha */}
-          <div className="sm:hidden">
+          {view === "grid" ? (
             <GridProdutos
-              produtos={filtered}
+              produtos={pageItems}
               ingredientes={ingredientes}
               materiais={materiais}
             />
-          </div>
-          <div className="hidden sm:block">
-            <ListaProdutos
-              produtos={filtered}
-              ingredientes={ingredientes}
-              materiais={materiais}
-            />
-          </div>
+          ) : (
+            <>
+              <div className="sm:hidden">
+                <GridProdutos
+                  produtos={pageItems}
+                  ingredientes={ingredientes}
+                  materiais={materiais}
+                />
+              </div>
+              <div className="hidden sm:block">
+                <ListaProdutos
+                  produtos={pageItems}
+                  ingredientes={ingredientes}
+                  materiais={materiais}
+                />
+              </div>
+            </>
+          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
         </>
       )}
     </div>

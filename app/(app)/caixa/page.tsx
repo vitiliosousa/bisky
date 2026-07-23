@@ -1,8 +1,10 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
+import { Pagination } from "@/components/Pagination";
 import { dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import { usePagination } from "@/lib/usePagination";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -40,6 +42,9 @@ export default function CaixaPage() {
       })
       .sort((a, b) => b.data.localeCompare(a.data));
   }, [movimentos, busca, tipo]);
+
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePagination(filtered);
 
   return (
     <div className="animate-in space-y-4">
@@ -133,55 +138,64 @@ export default function CaixaPage() {
           />
         </div>
       ) : (
-        <div className="card p-2!">
-          <ul className="divide-y divide-line">
-            {filtered.map((m) => {
-              const isEntrada = m.tipo === "entrada";
-              return (
-                <li key={m.id}>
-                  <Link
-                    href={`/caixa/${m.id}`}
-                    className="group flex items-center gap-3 px-3 py-3.5 sm:gap-4"
-                  >
-                    <span
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-full sm:size-11 ${
-                        isEntrada
-                          ? "bg-mint-soft text-mint"
-                          : "bg-caramel-soft text-caramel"
-                      }`}
+        <>
+          <div className="card p-2!">
+            <ul className="divide-y divide-line">
+              {pageItems.map((m) => {
+                const isEntrada = m.tipo === "entrada";
+                return (
+                  <li key={m.id}>
+                    <Link
+                      href={`/caixa/${m.id}`}
+                      className="group flex items-center gap-3 px-3 py-3.5 sm:gap-4"
                     >
-                      {isEntrada ? (
-                        <ArrowUpRight className="size-4.5" strokeWidth={2} />
-                      ) : (
-                        <ArrowDownLeft className="size-4.5" strokeWidth={2} />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink group-hover:text-strawberry">
-                        {m.descricao}
+                      <span
+                        className={`flex size-10 shrink-0 items-center justify-center rounded-full sm:size-11 ${
+                          isEntrada
+                            ? "bg-mint-soft text-mint"
+                            : "bg-caramel-soft text-caramel"
+                        }`}
+                      >
+                        {isEntrada ? (
+                          <ArrowUpRight className="size-4.5" strokeWidth={2} />
+                        ) : (
+                          <ArrowDownLeft className="size-4.5" strokeWidth={2} />
+                        )}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-muted">
-                        {dataCurta(m.data)} · {m.categoria}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink group-hover:text-strawberry">
+                          {m.descricao}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted">
+                          {dataCurta(m.data)} · {m.categoria}
+                        </span>
                       </span>
-                    </span>
-                    <span
-                      className={`shrink-0 text-sm font-semibold ${
-                        isEntrada ? "text-mint" : "text-caramel"
-                      }`}
-                    >
-                      {isEntrada ? "+" : "−"}
-                      {mzn(m.valor)}
-                    </span>
-                    <ChevronRight
-                      className="size-4 shrink-0 text-muted transition group-hover:text-strawberry"
-                      strokeWidth={1.75}
-                    />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                      <span
+                        className={`shrink-0 text-sm font-semibold ${
+                          isEntrada ? "text-mint" : "text-caramel"
+                        }`}
+                      >
+                        {isEntrada ? "+" : "−"}
+                        {mzn(m.valor)}
+                      </span>
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted transition group-hover:text-strawberry"
+                        strokeWidth={1.75}
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
+        </>
       )}
     </div>
   );
