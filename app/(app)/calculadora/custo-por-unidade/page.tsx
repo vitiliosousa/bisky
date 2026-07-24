@@ -162,7 +162,7 @@ export default function CustoPorUnidadePage() {
               </div>
             )}
             {dropOpen && (
-              <div className="fixed inset-0 z-[5]" onClick={() => setDropOpen(false)} />
+              <div className="fixed inset-0 z-5" onClick={() => setDropOpen(false)} />
             )}
           </div>
         </div>
