@@ -1,28 +1,48 @@
 "use client";
 
-import { ArrowLeft, Plus, Trash2, Scale } from "lucide-react";
+import { ArrowLeft, Trash2, Scale, Search, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useStore } from "@/lib/store";
+import { custoItemReceita } from "@/lib/cost";
+import { mzn } from "@/lib/format";
+import type { ItemReceita, Unidade } from "@/lib/types";
 
-type Linha = { nome: string; quantidade: string; unidade: string };
-
-function linhaVazia(): Linha {
-  return { nome: "", quantidade: "", unidade: "g" };
-}
-
-const UNIDADES = ["g", "kg", "ml", "l", "un", "colher", "xícara"];
+const UNIDADES: Unidade[] = ["g", "kg", "ml", "l", "un"];
 
 export default function EscalarReceitaPage() {
-  const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
+  const { ingredientes } = useStore();
+  const [linhas, setLinhas] = useState<ItemReceita[]>([]);
   const [original, setOriginal] = useState("");
   const [desejado, setDesejado] = useState("");
+  const [busca, setBusca] = useState("");
+  const [dropOpen, setDropOpen] = useState(false);
+  const buscaRef = useRef<HTMLInputElement>(null);
 
-  function atualizar(i: number, campo: keyof Linha, valor: string) {
-    setLinhas((prev) => prev.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l)));
+  const disponiveis = useMemo(
+    () =>
+      ingredientes.filter(
+        (ing) =>
+          !linhas.some((l) => l.ingredienteId === ing.id) &&
+          ing.nome.toLowerCase().includes(busca.toLowerCase()),
+      ),
+    [ingredientes, linhas, busca],
+  );
+
+  function addIngrediente(id: string) {
+    const ing = ingredientes.find((i) => i.id === id);
+    if (!ing) return;
+    setLinhas((prev) => [
+      ...prev,
+      { ingredienteId: ing.id, quantidade: 0, unidade: ing.unidade },
+    ]);
+    setBusca("");
+    setDropOpen(false);
+    buscaRef.current?.focus();
   }
 
-  function adicionar() {
-    setLinhas((prev) => [...prev, linhaVazia()]);
+  function setLinha(i: number, patch: Partial<ItemReceita>) {
+    setLinhas((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
   function remover(i: number) {
@@ -32,6 +52,9 @@ export default function EscalarReceitaPage() {
   const qtdOriginal = parseFloat(original) || 0;
   const qtdDesejada = parseFloat(desejado) || 0;
   const fator = qtdOriginal > 0 && qtdDesejada > 0 ? qtdDesejada / qtdOriginal : null;
+
+  const custoOriginal = linhas.reduce((s, l) => s + custoItemReceita(l, ingredientes), 0);
+  const custoEscalado = fator !== null ? custoOriginal * fator : null;
 
   return (
     <div className="animate-in space-y-4 sm:space-y-5">
@@ -53,7 +76,6 @@ export default function EscalarReceitaPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        {/* Ingredientes */}
         <div className="card space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-ink">Ingredientes da receita original</h2>
@@ -62,60 +84,89 @@ export default function EscalarReceitaPage() {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_90px_80px_36px] gap-2 px-1">
-              <span className="text-xs font-medium text-muted">Ingrediente</span>
-              <span className="text-xs font-medium text-muted">Quantidade</span>
-              <span className="text-xs font-medium text-muted">Unidade</span>
-              <span />
-            </div>
-
-            {linhas.map((linha, i) => (
-              <div key={i} className="grid grid-cols-[1fr_90px_80px_36px] items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="ex: Farinha"
-                  value={linha.nome}
-                  onChange={(e) => atualizar(i, "nome", e.target.value)}
-                  className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink placeholder:text-muted/50 outline-none transition focus:border-blueberry focus:bg-white"
-                />
-                <input
-                  type="number"
-                  placeholder="0"
-                  min="0"
-                  value={linha.quantidade}
-                  onChange={(e) => atualizar(i, "quantidade", e.target.value)}
-                  className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink placeholder:text-muted/50 outline-none transition focus:border-blueberry focus:bg-white"
-                />
-                <select
-                  value={linha.unidade}
-                  onChange={(e) => atualizar(i, "unidade", e.target.value)}
-                  className="h-10 w-full cursor-pointer rounded-xl border border-line bg-[#f8f8f9] px-2 text-sm text-ink outline-none transition focus:border-blueberry focus:bg-white"
-                >
-                  {UNIDADES.map((u) => (
-                    <option key={u} value={u}>{u}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => remover(i)}
-                  disabled={linhas.length === 1}
-                  className="flex size-9 items-center justify-center rounded-xl text-muted transition hover:bg-strawberry-soft hover:text-strawberry disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <Trash2 className="size-4" strokeWidth={1.75} />
-                </button>
+          {linhas.length > 0 && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[1fr_100px_80px_36px] gap-2 px-1">
+                <span className="text-xs font-medium text-muted">Ingrediente</span>
+                <span className="text-xs font-medium text-muted">Quantidade</span>
+                <span className="text-xs font-medium text-muted">Unidade</span>
+                <span />
               </div>
-            ))}
-          </div>
+              {linhas.map((linha, i) => {
+                const ing = ingredientes.find((x) => x.id === linha.ingredienteId);
+                return (
+                  <div key={i} className="grid grid-cols-[1fr_100px_80px_36px] items-center gap-2">
+                    <span className="truncate text-sm font-medium text-ink">
+                      {ing?.nome ?? "—"}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={linha.quantidade || ""}
+                      onChange={(e) =>
+                        setLinha(i, { quantidade: parseFloat(e.target.value) || 0 })
+                      }
+                      className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink outline-none transition focus:border-blueberry focus:bg-white"
+                    />
+                    <select
+                      value={linha.unidade}
+                      onChange={(e) => setLinha(i, { unidade: e.target.value as Unidade })}
+                      className="h-10 w-full cursor-pointer rounded-xl border border-line bg-[#f8f8f9] px-2 text-sm text-ink outline-none transition focus:border-blueberry focus:bg-white"
+                    >
+                      {UNIDADES.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => remover(i)}
+                      className="flex size-9 items-center justify-center rounded-xl text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+                    >
+                      <Trash2 className="size-4" strokeWidth={1.75} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={adicionar}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-blueberry transition hover:bg-blueberry-soft"
-          >
-            <Plus className="size-4" strokeWidth={2} />
-            Adicionar ingrediente
-          </button>
+          {/* Dropdown de busca */}
+          <div className="relative">
+            <label className="search-pill w-full" onClick={() => setDropOpen(true)}>
+              <Search className="size-4 shrink-0" strokeWidth={1.75} />
+              <input
+                ref={buscaRef}
+                type="search"
+                placeholder="Adicionar ingrediente…"
+                value={busca}
+                onChange={(e) => { setBusca(e.target.value); setDropOpen(true); }}
+                onFocus={() => setDropOpen(true)}
+              />
+              <Plus className="size-4 shrink-0 text-muted" strokeWidth={1.75} />
+            </label>
+            {dropOpen && disponiveis.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-52 overflow-y-auto rounded-2xl border border-line bg-white shadow-lg">
+                {disponiveis.map((ing) => (
+                  <button
+                    key={ing.id}
+                    type="button"
+                    onMouseDown={() => addIngrediente(ing.id)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-[#f4f5f7]"
+                  >
+                    <span className="font-medium text-ink">{ing.nome}</span>
+                    <span className="shrink-0 text-xs text-muted">
+                      {ing.quantidadeAtual} {ing.unidade} em stock
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {dropOpen && (
+              <div className="fixed inset-0 z-[5]" onClick={() => setDropOpen(false)} />
+            )}
+          </div>
         </div>
 
         {/* Painel direito */}
@@ -125,7 +176,7 @@ export default function EscalarReceitaPage() {
             <div className="space-y-3">
               <div>
                 <label className="mb-1.5 block text-xs text-muted">
-                  Receita original (unidades)
+                  Receita original rende (unidades)
                 </label>
                 <input
                   type="number"
@@ -157,7 +208,6 @@ export default function EscalarReceitaPage() {
             )}
           </div>
 
-          {/* Resultado */}
           {fator !== null && (
             <div className="card space-y-3 ring-2 ring-blueberry/20">
               <div className="flex items-center gap-2">
@@ -170,24 +220,35 @@ export default function EscalarReceitaPage() {
               </div>
               <ul className="space-y-2">
                 {linhas
-                  .filter((l) => l.nome && parseFloat(l.quantidade) > 0)
+                  .filter((l) => l.quantidade > 0)
                   .map((l, i) => {
-                    const novaQtd = parseFloat(l.quantidade) * fator;
+                    const ing = ingredientes.find((x) => x.id === l.ingredienteId);
+                    const novaQtd = l.quantidade * fator;
                     const formatado =
                       novaQtd % 1 === 0 ? novaQtd.toFixed(0) : novaQtd.toFixed(2);
                     return (
                       <li key={i} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-ink">{l.nome}</span>
+                        <span className="text-sm text-ink">{ing?.nome ?? "—"}</span>
                         <span className="shrink-0 text-sm font-semibold text-ink">
                           {formatado} {l.unidade}
                         </span>
                       </li>
                     );
                   })}
-                {linhas.filter((l) => l.nome && parseFloat(l.quantidade) > 0).length === 0 && (
-                  <li className="text-xs text-muted">Preenche os ingredientes para ver o resultado.</li>
+                {linhas.filter((l) => l.quantidade > 0).length === 0 && (
+                  <li className="text-xs text-muted">Preenche as quantidades para ver o resultado.</li>
                 )}
               </ul>
+              {custoEscalado !== null && custoEscalado > 0 && (
+                <div className="border-t border-line pt-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted">Custo estimado</span>
+                    <span className="text-sm font-semibold text-blueberry">
+                      {mzn(Math.round(custoEscalado))}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

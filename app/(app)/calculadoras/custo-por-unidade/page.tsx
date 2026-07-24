@@ -1,43 +1,63 @@
 "use client";
 
-import { ArrowLeft, Plus, Trash2, Calculator } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Calculator, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { mzn } from "@/lib/format";
+import { useStore } from "@/lib/store";
+import { custoItemReceita } from "@/lib/cost";
+import type { ItemReceita, Unidade } from "@/lib/types";
 
-type Linha = { nome: string; quantidade: string; precoTotal: string };
-
-function linhaVazia(): Linha {
-  return { nome: "", quantidade: "", precoTotal: "" };
-}
+const UNIDADES: Unidade[] = ["g", "kg", "ml", "l", "un"];
 
 export default function CustoPorUnidadePage() {
-  const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
+  const { ingredientes } = useStore();
+  const [linhas, setLinhas] = useState<ItemReceita[]>([]);
   const [unidades, setUnidades] = useState("");
+  const [busca, setBusca] = useState("");
+  const [dropOpen, setDropOpen] = useState(false);
+  const buscaRef = useRef<HTMLInputElement>(null);
 
-  function atualizar(i: number, campo: keyof Linha, valor: string) {
-    setLinhas((prev) => prev.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l)));
+  const disponiveis = useMemo(
+    () =>
+      ingredientes.filter(
+        (ing) =>
+          !linhas.some((l) => l.ingredienteId === ing.id) &&
+          ing.nome.toLowerCase().includes(busca.toLowerCase()),
+      ),
+    [ingredientes, linhas, busca],
+  );
+
+  function addIngrediente(id: string) {
+    const ing = ingredientes.find((i) => i.id === id);
+    if (!ing) return;
+    setLinhas((prev) => [
+      ...prev,
+      { ingredienteId: ing.id, quantidade: 0, unidade: ing.unidade },
+    ]);
+    setBusca("");
+    setDropOpen(false);
+    buscaRef.current?.focus();
   }
 
-  function adicionar() {
-    setLinhas((prev) => [...prev, linhaVazia()]);
+  function setLinha(i: number, patch: Partial<ItemReceita>) {
+    setLinhas((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
   function remover(i: number) {
     setLinhas((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  const custoTotal = linhas.reduce((soma, l) => {
-    const preco = parseFloat(l.precoTotal) || 0;
-    return soma + preco;
-  }, 0);
+  const custoTotal = linhas.reduce(
+    (soma, l) => soma + custoItemReceita(l, ingredientes),
+    0,
+  );
 
   const qtd = parseInt(unidades) || 0;
   const custoPorUnidade = qtd > 0 ? custoTotal / qtd : null;
 
   return (
     <div className="animate-in space-y-4 sm:space-y-5">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           href="/calculadoras"
@@ -56,63 +76,107 @@ export default function CustoPorUnidadePage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        {/* Ingredientes */}
         <div className="card space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-ink">Ingredientes / custos</h2>
+            <h2 className="text-sm font-semibold text-ink">Ingredientes usados</h2>
             <p className="mt-0.5 text-xs text-muted">
-              Adiciona cada ingrediente e o custo total que pagaste por ele
+              Adiciona os ingredientes e as quantidades usadas nesta receita
             </p>
           </div>
 
-          <div className="space-y-2">
-            {/* Cabeçalho */}
-            <div className="grid grid-cols-[1fr_120px_36px] gap-2 px-1">
-              <span className="text-xs font-medium text-muted">Ingrediente</span>
-              <span className="text-xs font-medium text-muted">Custo (MT)</span>
-              <span />
-            </div>
-
-            {linhas.map((linha, i) => (
-              <div key={i} className="grid grid-cols-[1fr_120px_36px] items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="ex: Farinha de trigo"
-                  value={linha.nome}
-                  onChange={(e) => atualizar(i, "nome", e.target.value)}
-                  className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink placeholder:text-muted/50 outline-none transition focus:border-strawberry focus:bg-white"
-                />
-                <input
-                  type="number"
-                  placeholder="0"
-                  min="0"
-                  value={linha.precoTotal}
-                  onChange={(e) => atualizar(i, "precoTotal", e.target.value)}
-                  className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink placeholder:text-muted/50 outline-none transition focus:border-strawberry focus:bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => remover(i)}
-                  disabled={linhas.length === 1}
-                  className="flex size-9 items-center justify-center rounded-xl text-muted transition hover:bg-strawberry-soft hover:text-strawberry disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <Trash2 className="size-4" strokeWidth={1.75} />
-                </button>
+          {/* Linhas de ingredientes */}
+          {linhas.length > 0 && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[1fr_100px_80px_36px] gap-2 px-1">
+                <span className="text-xs font-medium text-muted">Ingrediente</span>
+                <span className="text-xs font-medium text-muted">Quantidade</span>
+                <span className="text-xs font-medium text-muted">Unidade</span>
+                <span />
               </div>
-            ))}
-          </div>
+              {linhas.map((linha, i) => {
+                const ing = ingredientes.find((x) => x.id === linha.ingredienteId);
+                const custo = custoItemReceita(linha, ingredientes);
+                return (
+                  <div key={i} className="grid grid-cols-[1fr_100px_80px_36px] items-center gap-2">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-medium text-ink">
+                        {ing?.nome ?? "—"}
+                      </span>
+                      <span className="text-[0.7rem] text-muted">
+                        custo ≈ {mzn(Math.round(custo))}
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={linha.quantidade || ""}
+                      onChange={(e) =>
+                        setLinha(i, { quantidade: parseFloat(e.target.value) || 0 })
+                      }
+                      className="h-10 w-full rounded-xl border border-line bg-[#f8f8f9] px-3 text-sm text-ink outline-none transition focus:border-strawberry focus:bg-white"
+                    />
+                    <select
+                      value={linha.unidade}
+                      onChange={(e) => setLinha(i, { unidade: e.target.value as Unidade })}
+                      className="h-10 w-full cursor-pointer rounded-xl border border-line bg-[#f8f8f9] px-2 text-sm text-ink outline-none transition focus:border-strawberry focus:bg-white"
+                    >
+                      {UNIDADES.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => remover(i)}
+                      className="flex size-9 items-center justify-center rounded-xl text-muted transition hover:bg-strawberry-soft hover:text-strawberry"
+                    >
+                      <Trash2 className="size-4" strokeWidth={1.75} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={adicionar}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-strawberry transition hover:bg-strawberry-soft"
-          >
-            <Plus className="size-4" strokeWidth={2} />
-            Adicionar ingrediente
-          </button>
+          {/* Dropdown de busca */}
+          <div className="relative">
+            <label className="search-pill w-full" onClick={() => setDropOpen(true)}>
+              <Search className="size-4 shrink-0" strokeWidth={1.75} />
+              <input
+                ref={buscaRef}
+                type="search"
+                placeholder="Adicionar ingrediente…"
+                value={busca}
+                onChange={(e) => { setBusca(e.target.value); setDropOpen(true); }}
+                onFocus={() => setDropOpen(true)}
+              />
+              <Plus className="size-4 shrink-0 text-muted" strokeWidth={1.75} />
+            </label>
+            {dropOpen && disponiveis.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-52 overflow-y-auto rounded-2xl border border-line bg-white shadow-lg">
+                {disponiveis.map((ing) => (
+                  <button
+                    key={ing.id}
+                    type="button"
+                    onMouseDown={() => addIngrediente(ing.id)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-[#f4f5f7]"
+                  >
+                    <span className="font-medium text-ink">{ing.nome}</span>
+                    <span className="shrink-0 text-xs text-muted">
+                      {mzn(ing.precoCompra)} / {ing.quantidadeCompra} {ing.unidade}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {dropOpen && (
+              <div className="fixed inset-0 z-[5]" onClick={() => setDropOpen(false)} />
+            )}
+          </div>
         </div>
 
-        {/* Painel de resultado */}
+        {/* Painel resultado */}
         <div className="space-y-3">
           <div className="card space-y-4">
             <h2 className="text-sm font-semibold text-ink">Quantidade produzida</h2>
@@ -131,7 +195,6 @@ export default function CustoPorUnidadePage() {
             </div>
           </div>
 
-          {/* Resultado */}
           <div className={`card space-y-3 ${custoPorUnidade !== null ? "ring-2 ring-strawberry/20" : ""}`}>
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-full bg-strawberry-soft text-strawberry">
@@ -143,7 +206,7 @@ export default function CustoPorUnidadePage() {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted">Custo total da receita</span>
-                <span className="text-sm font-semibold text-ink">{mzn(custoTotal)}</span>
+                <span className="text-sm font-semibold text-ink">{mzn(Math.round(custoTotal))}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted">Unidades produzidas</span>
