@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Users,
   Cake,
+  Calculator,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -241,7 +242,7 @@ export default function PerfilPage() {
         </Link>
         <Link
           href="/produtos"
-          className="card flex items-center gap-3 transition hover:bg-[#fafafa] sm:col-span-1 col-span-2"
+          className="card flex items-center gap-3 transition hover:bg-[#fafafa]"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-caramel-soft text-caramel">
             <Cake className="size-4.5" strokeWidth={1.75} />
@@ -249,6 +250,18 @@ export default function PerfilPage() {
           <span>
             <span className="block text-sm font-semibold text-ink">Produtos</span>
             <span className="block text-xs text-muted">Receitas e preços</span>
+          </span>
+        </Link>
+        <Link
+          href="/calculadoras"
+          className="card flex items-center gap-3 transition hover:bg-[#fafafa]"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-mint-soft text-mint">
+            <Calculator className="size-4.5" strokeWidth={1.75} />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold text-ink">Calculadoras</span>
+            <span className="block text-xs text-muted">Ferramentas de cálculo</span>
           </span>
         </Link>
       </div>
