@@ -1,12 +1,14 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
+import { ImportModal } from "@/components/ImportModal";
 import { Pagination } from "@/components/Pagination";
 import { custoUnitario, formatQty } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { Ingrediente } from "@/lib/types";
 import { usePagination } from "@/lib/usePagination";
+import { api } from "@/lib/api";
 import {
   AlertTriangle,
   ChevronRight,
@@ -15,9 +17,24 @@ import {
   Package,
   Plus,
   Search,
+  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+
+const COLUNAS_ING = [
+  { key: "nome", label: "nome", obrigatoria: true },
+  { key: "quantidade_atual", label: "quantidade_atual", obrigatoria: true, tipo: "number" as const },
+  { key: "unidade", label: "unidade", obrigatoria: true },
+  { key: "preco_compra", label: "preco_compra", obrigatoria: true, tipo: "number" as const },
+  { key: "quantidade_compra", label: "quantidade_compra", obrigatoria: true, tipo: "number" as const },
+  { key: "estoque_minimo", label: "estoque_minimo", obrigatoria: true, tipo: "number" as const },
+];
+
+const TEMPLATE_ING = [
+  { nome: "Farinha de trigo", quantidade_atual: 8, unidade: "kg", preco_compra: 350, quantidade_compra: 25, estoque_minimo: 5 },
+  { nome: "Açúcar refinado", quantidade_atual: 3, unidade: "kg", preco_compra: 280, quantidade_compra: 10, estoque_minimo: 4 },
+];
 
 function GridIngredientes({ items }: { items: Ingrediente[] }) {
   return (
@@ -148,10 +165,36 @@ function ListaIngredientes({ items }: { items: Ingrediente[] }) {
 }
 
 export default function IngredientesPage() {
-  const { ingredientes } = useStore();
+  const { ingredientes, reload } = useStore();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "falta">("todos");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [importOpen, setImportOpen] = useState(false);
+
+  async function importarIngredientes(rows: Record<string, unknown>[]) {
+    const payload = rows.map((r) => ({
+      nome: String(r.nome ?? ""),
+      quantidadeAtual: Number(r.quantidade_atual ?? 0),
+      unidade: String(r.unidade ?? "un"),
+      precoCompra: Number(r.preco_compra ?? 0),
+      quantidadeCompra: Number(r.quantidade_compra ?? 1),
+      estoqueMinimo: Number(r.estoque_minimo ?? 0),
+    }));
+
+    const erros: string[] = [];
+    let ok = 0;
+    try {
+      const criados = await api<unknown[]>("/api/ingredientes/bulk", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      ok = criados.length;
+      await reload();
+    } catch (e: unknown) {
+      erros.push(e instanceof Error ? e.message : "Erro ao importar.");
+    }
+    return { ok, erros };
+  }
 
   const falta = ingredientes.filter((i) => i.quantidadeAtual < i.estoqueMinimo);
 
@@ -235,6 +278,15 @@ export default function IngredientesPage() {
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#f4f5f7] px-4 text-sm font-medium text-ink transition hover:bg-[#ececee]"
+          >
+            <FileSpreadsheet className="size-4" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Importar</span>
+          </button>
+
           <Link
             href="/ingredientes/novo"
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
@@ -245,6 +297,18 @@ export default function IngredientesPage() {
           </Link>
         </div>
       </div>
+
+      {importOpen && (
+        <ImportModal
+          titulo="Importar ingredientes"
+          descricao="Importa vários ingredientes de uma vez via Excel"
+          colunas={COLUNAS_ING}
+          templateNome="modelo_ingredientes.xlsx"
+          templateExemplo={TEMPLATE_ING}
+          onImportar={importarIngredientes}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
 
       {filtered.length === 0 ? (
         <div className="card">

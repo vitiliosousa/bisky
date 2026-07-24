@@ -58,22 +58,13 @@ export default function CustoPorUnidadePage() {
 
   return (
     <div className="animate-in space-y-4 sm:space-y-5">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/calculadoras"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f4f5f7] text-muted transition hover:bg-[#ececee] hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-            Custo por unidade
-          </h1>
-          <p className="mt-0.5 text-xs text-muted sm:text-sm">
-            Descobre quanto custa produzir 1 unidade
-          </p>
-        </div>
-      </div>
+      <Link
+        href="/calculadora"
+        className="hidden items-center gap-2 text-sm font-medium text-muted transition hover:text-ink lg:inline-flex"
+      >
+        <ArrowLeft className="size-4" strokeWidth={1.75} />
+        Calculadora
+      </Link>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="card space-y-4">
@@ -87,7 +78,7 @@ export default function CustoPorUnidadePage() {
           {/* Linhas de ingredientes */}
           {linhas.length > 0 && (
             <div className="space-y-2">
-              <div className="grid grid-cols-[1fr_100px_80px_36px] gap-2 px-1">
+              <div className="grid grid-cols-[1fr_76px_60px_28px] gap-2 px-1 sm:grid-cols-[1fr_100px_80px_36px]">
                 <span className="text-xs font-medium text-muted">Ingrediente</span>
                 <span className="text-xs font-medium text-muted">Quantidade</span>
                 <span className="text-xs font-medium text-muted">Unidade</span>
@@ -97,7 +88,7 @@ export default function CustoPorUnidadePage() {
                 const ing = ingredientes.find((x) => x.id === linha.ingredienteId);
                 const custo = custoItemReceita(linha, ingredientes);
                 return (
-                  <div key={i} className="grid grid-cols-[1fr_100px_80px_36px] items-center gap-2">
+                  <div key={i} className="grid grid-cols-[1fr_76px_60px_28px] items-center gap-2 sm:grid-cols-[1fr_100px_80px_36px]">
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium text-ink">
                         {ing?.nome ?? "—"}

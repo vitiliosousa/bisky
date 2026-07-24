@@ -253,14 +253,14 @@ export default function PerfilPage() {
           </span>
         </Link>
         <Link
-          href="/calculadoras"
+          href="/calculadora"
           className="card flex items-center gap-3 transition hover:bg-[#fafafa]"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-mint-soft text-mint">
             <Calculator className="size-4.5" strokeWidth={1.75} />
           </span>
           <span>
-            <span className="block text-sm font-semibold text-ink">Calculadoras</span>
+            <span className="block text-sm font-semibold text-ink">Calculadora</span>
             <span className="block text-xs text-muted">Ferramentas de cálculo</span>
           </span>
         </Link>

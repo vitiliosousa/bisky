@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const CALCULADORAS = [
   {
-    href: "/calculadoras/custo-por-unidade",
+    href: "/calculadora/custo-por-unidade",
     icon: Calculator,
     color: "bg-strawberry-soft text-strawberry",
     nome: "Custo por unidade",
@@ -13,7 +13,7 @@ const CALCULADORAS = [
       "Sabes que a receita rende X donuts, mas qual é o custo de 1? Insere os ingredientes, a quantidade produzida e descobre o custo unitário.",
   },
   {
-    href: "/calculadoras/escalar-receita",
+    href: "/calculadora/escalar-receita",
     icon: Scale,
     color: "bg-blueberry-soft text-blueberry",
     nome: "Escalar receita",
@@ -21,7 +21,7 @@ const CALCULADORAS = [
       "A receita é para 12 unidades mas precisas de 40? Descobre quanto de cada ingrediente precisas para qualquer quantidade.",
   },
   {
-    href: "/calculadoras/preco-de-venda",
+    href: "/calculadora/preco-de-venda",
     icon: TrendingUp,
     color: "bg-mint-soft text-mint",
     nome: "Preço de venda",
@@ -29,7 +29,7 @@ const CALCULADORAS = [
       "Com base no custo do produto, calcula o preço de venda ideal para atingir a margem de lucro que queres.",
   },
   {
-    href: "/calculadoras/ponto-de-equilibrio",
+    href: "/calculadora/ponto-de-equilibrio",
     icon: Target,
     color: "bg-caramel-soft text-caramel",
     nome: "Ponto de equilíbrio",

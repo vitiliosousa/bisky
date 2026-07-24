@@ -38,22 +38,13 @@ export default function PontoDeEquilibrioPage() {
 
   return (
     <div className="animate-in space-y-4 sm:space-y-5">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/calculadoras"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f4f5f7] text-muted transition hover:bg-[#ececee] hover:text-ink"
-        >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-            Ponto de equilíbrio
-          </h1>
-          <p className="mt-0.5 text-xs text-muted sm:text-sm">
-            Descobre quantas unidades precisas de vender para não ter prejuízo
-          </p>
-        </div>
-      </div>
+      <Link
+        href="/calculadora"
+        className="hidden items-center gap-2 text-sm font-medium text-muted transition hover:text-ink lg:inline-flex"
+      >
+        <ArrowLeft className="size-4" strokeWidth={1.75} />
+        Calculadora
+      </Link>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">

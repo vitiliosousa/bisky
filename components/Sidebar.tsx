@@ -40,7 +40,7 @@ export const NAV_FIN: NavItem[] = [
   { href: "/caixa",          label: "Fluxo de caixa", subtitle: "Entradas e saídas do mês",    icon: Wallet        },
   { href: "/contas-pagar",   label: "Contas a pagar", subtitle: "Fornecedores e despesas",     icon: ArrowDownLeft },
   { href: "/relatorios",     label: "Relatórios",     subtitle: "Desempenho e análises",       icon: BarChart3     },
-  { href: "/calculadoras",   label: "Calculadoras",   subtitle: "Ferramentas de cálculo",      icon: Calculator    },
+  { href: "/calculadora",   label: "Calculadora",   subtitle: "Ferramentas de cálculo",      icon: Calculator    },
 ];
 
 export const NAV_ALL = [...NAV_MAIN, ...NAV_FIN];

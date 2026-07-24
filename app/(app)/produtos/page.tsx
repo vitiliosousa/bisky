@@ -1,10 +1,12 @@
 "use client";
 
 import { Empty } from "@/components/Empty";
+import { ImportModal } from "@/components/ImportModal";
 import { Pagination } from "@/components/Pagination";
 import { custoProduto, margemLucro } from "@/lib/cost";
 import { mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import type { Ingrediente, Material, Produto } from "@/lib/types";
 import { usePagination } from "@/lib/usePagination";
 import {
@@ -14,9 +16,44 @@ import {
   Plus,
   Search,
   UtensilsCrossed,
+  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+
+const ABAS_PROD = [
+  {
+    key: "produtos",
+    label: "Produtos",
+    colunas: [
+      { key: "nome", label: "nome", obrigatoria: true },
+      { key: "categoria", label: "categoria", obrigatoria: true },
+      { key: "preco", label: "preco", obrigatoria: true, tipo: "number" as const },
+    ],
+  },
+  {
+    key: "receitas",
+    label: "Receitas",
+    colunas: [
+      { key: "produto", label: "produto", obrigatoria: true },
+      { key: "ingrediente", label: "ingrediente", obrigatoria: true },
+      { key: "quantidade", label: "quantidade", obrigatoria: true, tipo: "number" as const },
+      { key: "unidade", label: "unidade", obrigatoria: true },
+    ],
+  },
+];
+
+const TEMPLATE_ABAS = {
+  Produtos: [
+    { nome: "Bolo de Chocolate", categoria: "Bolos", preco: 1800 },
+    { nome: "Cupcake de Morango", categoria: "Cupcakes", preco: 120 },
+  ],
+  Receitas: [
+    { produto: "Bolo de Chocolate", ingrediente: "Farinha de trigo", quantidade: 0.3, unidade: "kg" },
+    { produto: "Bolo de Chocolate", ingrediente: "Açúcar refinado", quantidade: 0.25, unidade: "kg" },
+    { produto: "Cupcake de Morango", ingrediente: "Farinha de trigo", quantidade: 0.05, unidade: "kg" },
+  ],
+};
 
 function MargemBadge({ margem }: { margem: number }) {
   if (margem >= 50)
@@ -144,10 +181,60 @@ function ListaProdutos({
 }
 
 export default function ProdutosPage() {
-  const { produtos, ingredientes, materiais } = useStore();
+  const { produtos, ingredientes, materiais, reload } = useStore();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [importOpen, setImportOpen] = useState(false);
+
+  async function importarProdutos(
+    rows: Record<string, unknown>[],
+    extra?: Record<string, Record<string, unknown>[]>,
+  ) {
+    const receitas = extra?.receitas ?? [];
+    const erros: string[] = [];
+    let ok = 0;
+
+    const payload = rows.map((r) => {
+      const nomeProd = String(r.nome ?? "");
+      const receitaProd = receitas
+        .filter((rec) => String(rec.produto ?? "") === nomeProd)
+        .map((rec) => {
+          const nomeIng = String(rec.ingrediente ?? "");
+          const ing = ingredientes.find(
+            (i) => i.nome.toLowerCase() === nomeIng.toLowerCase(),
+          );
+          if (!ing) erros.push(`Ingrediente "${nomeIng}" não encontrado no estoque.`);
+          return {
+            ingredienteId: ing?.id ?? "",
+            quantidade: Number(rec.quantidade ?? 0),
+            unidade: String(rec.unidade ?? "un"),
+          };
+        })
+        .filter((r) => r.ingredienteId);
+
+      return {
+        nome: nomeProd,
+        categoria: String(r.categoria ?? ""),
+        preco: Number(r.preco ?? 0),
+        receita: receitaProd,
+        modoPreparo: [],
+        materiaisNecessarios: [],
+      };
+    });
+
+    try {
+      const criados = await api<unknown[]>("/api/produtos/bulk", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      ok = criados.length;
+      await reload();
+    } catch (e: unknown) {
+      erros.push(e instanceof Error ? e.message : "Erro ao importar.");
+    }
+    return { ok, erros };
+  }
 
   const categorias = [...new Set(produtos.map((p) => p.categoria))];
 
@@ -229,6 +316,15 @@ export default function ProdutosPage() {
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#f4f5f7] px-4 text-sm font-medium text-ink transition hover:bg-[#ececee]"
+          >
+            <FileSpreadsheet className="size-4" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Importar</span>
+          </button>
+
           <Link
             href="/produtos/novo"
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-strawberry px-4 text-sm font-semibold text-white shadow-sm shadow-strawberry/30 transition hover:brightness-110 sm:px-5"
@@ -239,6 +335,20 @@ export default function ProdutosPage() {
           </Link>
         </div>
       </div>
+
+      {importOpen && (
+        <ImportModal
+          titulo="Importar produtos"
+          descricao="Importa vários produtos e receitas de uma vez via Excel"
+          colunas={ABAS_PROD[0].colunas}
+          abas={ABAS_PROD}
+          templateNome="modelo_produtos.xlsx"
+          templateExemplo={[]}
+          templateExemploAbas={TEMPLATE_ABAS}
+          onImportar={importarProdutos}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
 
       {/* ── Produtos ───────────────────────────────────────── */}
       {filtered.length === 0 ? (
