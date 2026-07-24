@@ -386,10 +386,12 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Pedidos recentes + alertas ─────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="card">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card min-w-0 overflow-hidden">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold text-ink">Pedidos recentes</h2>
+            <h2 className="min-w-0 truncate text-base font-semibold text-ink">
+              Pedidos recentes
+            </h2>
             <Link
               href="/pedidos"
               className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-strawberry hover:underline"
@@ -400,26 +402,30 @@ export default function DashboardPage() {
           {recentes.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">Sem pedidos ainda.</p>
           ) : (
-            <ul>
+            <ul className="min-w-0">
               {recentes.map((p) => {
                 const c = clientes.find((x) => x.id === p.clienteId);
-                const itens = p.itens
-                  .map((i) => {
-                    const pr = produtos.find((x) => x.id === i.produtoId);
-                    return `${i.quantidade}× ${pr?.nome ?? "?"}`;
-                  })
-                  .join(", ");
+                const first = p.itens[0];
+                const firstNome = first
+                  ? (produtos.find((x) => x.id === first.produtoId)?.nome ?? "?")
+                  : "";
+                const itens =
+                  p.itens.length === 0
+                    ? "—"
+                    : p.itens.length === 1
+                      ? `${first!.quantidade}× ${firstNome}`
+                      : `${first!.quantidade}× ${firstNome} · +${p.itens.length - 1}`;
                 const faltaPagar = p.valor - p.pago;
                 return (
-                  <li key={p.id}>
+                  <li key={p.id} className="min-w-0">
                     <Link
-                      href="/pedidos"
-                      className="flex items-center gap-3 rounded-2xl px-1.5 py-3 transition hover:bg-[#f4f5f7] sm:px-2"
+                      href={`/pedidos/${p.id}`}
+                      className="flex min-w-0 items-center gap-3 rounded-2xl px-1.5 py-3 transition hover:bg-[#f4f5f7] sm:px-2"
                     >
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-strawberry-soft text-[0.7rem] font-bold text-strawberry">
                         {initials(c?.nome ?? "?")}
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 overflow-hidden">
                         <p className="truncate text-sm font-semibold text-ink">
                           {c?.nome ?? "—"}
                         </p>
@@ -441,7 +447,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="card">
+        <div className="card min-w-0 overflow-hidden">
           <h2 className="text-base font-semibold text-ink">Precisa de atenção</h2>
           <ul className="mt-3 space-y-2">
             {falta.length === 0 && aPagar.length === 0 && (
