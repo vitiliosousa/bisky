@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { DetailCardActions, DetailTopBar } from "@/components/DetailActions";
-import { confirmDelete, toast } from "@/components/ui";
+import { useConfirmDelete, toast } from "@/components/ui";
 import { dataCurta, mzn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
@@ -11,6 +11,7 @@ export default function MovimentoDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { movimentos, removeMovimento } = useStore();
+  const { confirm, dialog } = useConfirmDelete();
 
   const mov = movimentos.find((m) => m.id === params.id);
 
@@ -30,7 +31,7 @@ export default function MovimentoDetalhePage() {
   const editHref = `/caixa/${mov.id}/editar`;
 
   async function apagar() {
-    if (!confirmDelete(mov!.descricao)) return;
+    if (!(await confirm(mov!.descricao))) return;
     try {
       await removeMovimento(mov!.id);
       toast("Movimento apagado.", "info");
@@ -42,6 +43,7 @@ export default function MovimentoDetalhePage() {
 
   return (
     <div className="animate-in space-y-4 sm:space-y-5">
+      {dialog}
       <DetailTopBar
         backHref="/caixa"
         backLabel="Fluxo de caixa"
