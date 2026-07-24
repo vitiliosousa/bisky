@@ -153,6 +153,18 @@ if (pathname === "/perdas/novo") {
   if (pathname === "/perfil") {
     return { title: "Perfil", subtitle: "Os seus dados e contactos" };
   }
+  if (pathname === "/calculadoras/custo-por-unidade") {
+    return { title: "Custo por unidade", subtitle: "Descobre quanto custa produzir 1 unidade" };
+  }
+  if (pathname === "/calculadoras/escalar-receita") {
+    return { title: "Escalar receita", subtitle: "Ajusta os ingredientes para qualquer quantidade" };
+  }
+  if (pathname === "/calculadoras/preco-de-venda") {
+    return { title: "Preço de venda", subtitle: "Calcula o preço ideal com base na margem" };
+  }
+  if (pathname === "/calculadoras/ponto-de-equilibrio") {
+    return { title: "Ponto de equilíbrio", subtitle: "Quantas unidades precisas vender por mês" };
+  }
   const item = NAV_ALL.find((n) => n.href === pathname);
   return { title: item?.label ?? "Bisky", subtitle: item?.subtitle ?? "" };
 }
